@@ -1,10 +1,26 @@
 import { api } from '../api.js';
 import { state, setState } from '../state.js';
 
+const DEFAULT_COLORS = [
+  { id: 'amber', label: 'Оранжево-жёлтый', value: '#F59E0B' },
+  { id: 'teal', label: 'Бирюзовый', value: '#006D5B' },
+  { id: 'blue', label: 'Синий', value: '#3B82F6' },
+  { id: 'rose', label: 'Розовый', value: '#F43F5E' },
+  { id: 'violet', label: 'Фиолетовый', value: '#8B5CF6' },
+  { id: 'emerald', label: 'Зелёный', value: '#10B981' },
+  { id: 'orange', label: 'Оранжевый', value: '#F97316' },
+  { id: 'sky', label: 'Голубой', value: '#0EA5E9' },
+  { id: 'slate', label: 'Серый', value: '#64748B' },
+  { id: 'lime', label: 'Лаймовый', value: '#84CC16' },
+];
+
 export function renderNewsForm(container, onSaved) {
   const editing = state.editingNews;
   const isEdit = !!editing;
-  const colors = state.colors;
+  const colors = state.colors.length ? state.colors : DEFAULT_COLORS;
+  if (!state.colors.length) {
+    api.getColors().then(realColors => setState({ colors: realColors })).catch(() => {});
+  }
 
   const existingPhotos = isEdit ? (editing.photos || []) : [];
 
@@ -59,7 +75,7 @@ export function renderNewsForm(container, onSaved) {
             <span>Перетащите фото сюда или</span>
             <label class="btn-upload">
               Выбрать файлы
-              <input type="file" id="photo-input" multiple accept="image/*" capture="environment" style="display:none"/>
+              <input type="file" id="photo-input" multiple accept="image/*" style="display:none"/>
             </label>
           </div>
           <div class="photo-preview-list" id="photo-previews"></div>
@@ -159,7 +175,6 @@ export function renderNewsForm(container, onSaved) {
       newFiles.forEach(f => fd.append('new_photos', f));
       if (isEdit) {
         fd.append('delete_photo_ids', JSON.stringify(deletedPhotoIds));
-        fd.append('photos', '');  // empty photos field for PUT compat
         await api.updateNews(editing.id, fd);
       } else {
         newFiles.forEach(f => fd.append('photos', f));

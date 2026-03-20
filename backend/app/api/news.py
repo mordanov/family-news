@@ -12,22 +12,33 @@ from app.config import NEWS_COLORS, DEFAULT_COLOR
 router = APIRouter(prefix="/api/news", tags=["news"])
 
 
+def _normalize_photo(photo: dict | str) -> Optional[dict]:
+    if isinstance(photo, str):
+        try:
+            photo = json.loads(photo)
+        except Exception:
+            return None
+    if not isinstance(photo, dict):
+        return None
+    if "id" not in photo or "filename" not in photo or "thumbnail_filename" not in photo:
+        return None
+    return {
+        "id": photo["id"],
+        "url": f"/photos/{photo['filename']}",
+        "thumbnail_url": f"/photos/thumbnails/{photo['thumbnail_filename']}",
+    }
+
+
 def format_news(item: dict) -> dict:
     photos = item.get("photos") or []
+    normalized_photos = [p for p in (_normalize_photo(photo) for photo in photos) if p is not None]
     return {
         "id": item["id"],
         "description": item["description"],
         "color": item["color"],
         "created_at": item["created_at"].isoformat() if item["created_at"] else None,
         "updated_at": item["updated_at"].isoformat() if item["updated_at"] else None,
-        "photos": [
-            {
-                "id": p["id"],
-                "url": f"/photos/{p['filename']}",
-                "thumbnail_url": f"/photos/thumbnails/{p['thumbnail_filename']}",
-            }
-            for p in photos
-        ] if photos else [],
+        "photos": normalized_photos,
     }
 
 

@@ -115,6 +115,26 @@ def test_format_news_item_with_photos():
     assert result["photos"][0]["thumbnail_url"] == "/photos/thumbnails/thumb_abc.jpg"
 
 
+def test_format_news_item_with_stringified_photos():
+    from datetime import datetime, timezone
+    from app.api.news import format_news
+    now = datetime.now(timezone.utc)
+    item = {
+        "id": 3,
+        "description": "Stringified photos",
+        "color": "blue",
+        "created_at": now,
+        "updated_at": now,
+        "photos": [
+            '{"id": 42, "filename": "x.jpg", "thumbnail_filename": "thumb_x.jpg"}',
+        ],
+    }
+    result = format_news(item)
+    assert len(result["photos"]) == 1
+    assert result["photos"][0]["id"] == 42
+    assert result["photos"][0]["url"] == "/photos/x.jpg"
+
+
 # ── Config tests ─────────────────────────────────────────────────────────────
 
 def test_news_colors_have_required_fields():
