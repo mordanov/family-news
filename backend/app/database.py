@@ -81,10 +81,14 @@ async def _seed_users(conn):
         (USER1_LOGIN, USER1_PASSWORD),
         (USER2_LOGIN, USER2_PASSWORD),
     ]:
-        existing = await conn.fetchrow("SELECT id FROM users WHERE login=$1", login)
-        if not existing:
-            pw_hash = hash_password(password)
-            await conn.execute(
-                "INSERT INTO users (login, password_hash) VALUES ($1, $2)",
-                login, pw_hash
-            )
+        pw_hash = hash_password(password)
+        await conn.execute(
+            """
+            INSERT INTO users (login, password_hash)
+            VALUES ($1, $2)
+            ON CONFLICT (login)
+            DO UPDATE SET password_hash = EXCLUDED.password_hash
+            """,
+            login,
+            pw_hash,
+        )
