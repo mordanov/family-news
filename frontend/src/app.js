@@ -51,7 +51,7 @@ function render(s) {
 
   // Lightbox
   if (s.lightboxUrl) {
-    renderLightbox(lbEl, s.lightboxUrl);
+    renderLightbox(lbEl, s);
   } else {
     lbEl.innerHTML = '';
   }

@@ -8,6 +8,8 @@ export const state = {
   colors: [],
   loading: false,
   lightboxUrl: null,
+  lightboxPhotos: [],
+  lightboxIndex: 0,
   editingNews: null,   // news object being edited
   showForm: false,
 };

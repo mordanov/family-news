@@ -40,9 +40,15 @@ export function renderNewsCard(news, colorMap, onEdit, onDelete) {
   card.querySelector('[data-action="delete"]').addEventListener('click', () => onDelete(news));
 
   // Lightbox
+  const photoUrls = (news.photos || []).map(p => p.url).filter(Boolean);
   card.querySelectorAll('.photo-thumb-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      setState({ lightboxUrl: btn.dataset.src });
+      const index = Number(btn.dataset.idx) || 0;
+      setState({
+        lightboxUrl: btn.dataset.src,
+        lightboxPhotos: photoUrls,
+        lightboxIndex: index,
+      });
     });
   });
 
