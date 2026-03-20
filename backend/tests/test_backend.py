@@ -111,8 +111,8 @@ def test_format_news_item_with_photos():
     }
     result = format_news(item)
     assert len(result["photos"]) == 1
-    assert result["photos"][0]["url"] == "/photos/abc.jpg"
-    assert result["photos"][0]["thumbnail_url"] == "/photos/thumbnails/thumb_abc.jpg"
+    assert result["photos"][0]["url"] == "/api/photos/abc.jpg"
+    assert result["photos"][0]["thumbnail_url"] == "/api/photos/thumbnails/thumb_abc.jpg"
 
 
 def test_format_news_item_with_stringified_photos():
@@ -132,7 +132,7 @@ def test_format_news_item_with_stringified_photos():
     result = format_news(item)
     assert len(result["photos"]) == 1
     assert result["photos"][0]["id"] == 42
-    assert result["photos"][0]["url"] == "/photos/x.jpg"
+    assert result["photos"][0]["url"] == "/api/photos/x.jpg"
 
 
 # ── Config tests ─────────────────────────────────────────────────────────────

@@ -24,8 +24,8 @@ def _normalize_photo(photo: dict | str) -> Optional[dict]:
         return None
     return {
         "id": photo["id"],
-        "url": f"/photos/{photo['filename']}",
-        "thumbnail_url": f"/photos/thumbnails/{photo['thumbnail_filename']}",
+        "url": f"/api/photos/{photo['filename']}",
+        "thumbnail_url": f"/api/photos/thumbnails/{photo['thumbnail_filename']}",
     }
 
 
