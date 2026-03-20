@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="32" fill="#006D5B"/>
+  <!-- Newspaper / feed icon: folded page -->
+  <rect x="14" y="16" width="28" height="32" rx="3" fill="#ffffff"/>
+  <rect x="18" y="22" width="16" height="3" rx="1.5" fill="#006D5B"/>
+  <rect x="18" y="29" width="20" height="2" rx="1" fill="#B2D8D1"/>
+  <rect x="18" y="34" width="20" height="2" rx="1" fill="#B2D8D1"/>
+  <rect x="18" y="39" width="14" height="2" rx="1" fill="#B2D8D1"/>
+  <!-- Corner fold -->
+  <path d="M38 16 L42 20 L38 20 Z" fill="#E6F4F1"/>
+  <path d="M38 16 L42 20 L38 20 Z" fill="none" stroke="#B2D8D1" stroke-width="0.5"/>
+  <!-- Small star/dot accent -->
+  <circle cx="46" cy="20" r="5" fill="#F59E0B"/>
+  <text x="46" y="24" text-anchor="middle" font-size="7" fill="#fff" font-family="sans-serif" font-weight="bold">!</text>
+</svg>
+
