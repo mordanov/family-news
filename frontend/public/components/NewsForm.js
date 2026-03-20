@@ -24,6 +24,11 @@ export function renderNewsForm(container, onSaved) {
 
   const existingPhotos = isEdit ? (editing.photos || []) : [];
 
+  // Prepare default datetime value: editing → existing created_at, new → now (local)
+  const defaultDatetime = isEdit && editing.created_at
+    ? _toDatetimeLocal(new Date(editing.created_at))
+    : _toDatetimeLocal(new Date());
+
   container.innerHTML = `
     <div class="modal-overlay" id="form-overlay">
       <div class="modal-card">
@@ -49,6 +54,11 @@ export function renderNewsForm(container, onSaved) {
               </button>
             `).join('')}
           </div>
+        </div>
+
+        <div class="field">
+          <label>Дата и время события</label>
+          <input type="datetime-local" id="news-datetime" value="${defaultDatetime}"/>
         </div>
 
         ${isEdit && existingPhotos.length > 0 ? `
@@ -160,6 +170,7 @@ export function renderNewsForm(container, onSaved) {
   // Save
   container.querySelector('#save-form').addEventListener('click', async () => {
     const desc = container.querySelector('#news-desc').value.trim();
+    const datetimeVal = container.querySelector('#news-datetime').value; // "YYYY-MM-DDTHH:MM"
     const errEl = container.querySelector('#form-error');
     if (!desc) { errEl.textContent = 'Введите описание'; errEl.classList.remove('hidden'); return; }
 
@@ -172,6 +183,7 @@ export function renderNewsForm(container, onSaved) {
       const fd = new FormData();
       fd.append('description', desc);
       fd.append('color', selectedColor);
+      if (datetimeVal) fd.append('created_at', datetimeVal);
       newFiles.forEach(f => fd.append('new_photos', f));
       if (isEdit) {
         fd.append('delete_photo_ids', JSON.stringify(deletedPhotoIds));
@@ -194,3 +206,10 @@ export function renderNewsForm(container, onSaved) {
 function escHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+/** Convert a Date to "YYYY-MM-DDTHH:MM" for datetime-local input (local time). */
+function _toDatetimeLocal(date) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+

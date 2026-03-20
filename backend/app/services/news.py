@@ -1,4 +1,6 @@
 from asyncpg import Pool
+from datetime import datetime
+from typing import Optional
 from app.config import DEFAULT_COLOR
 
 
@@ -45,21 +47,33 @@ async def get_news_by_id(pool: Pool, news_id: int):
     return dict(row) if row else None
 
 
-async def create_news(pool: Pool, description: str, color: str = DEFAULT_COLOR) -> int:
+async def create_news(pool: Pool, description: str, color: str = DEFAULT_COLOR, created_at: Optional[datetime] = None) -> int:
     async with pool.acquire() as conn:
-        news_id = await conn.fetchval(
-            "INSERT INTO news (description, color) VALUES ($1, $2) RETURNING id",
-            description, color
-        )
+        if created_at is not None:
+            news_id = await conn.fetchval(
+                "INSERT INTO news (description, color, created_at, updated_at) VALUES ($1, $2, $3, $3) RETURNING id",
+                description, color, created_at
+            )
+        else:
+            news_id = await conn.fetchval(
+                "INSERT INTO news (description, color) VALUES ($1, $2) RETURNING id",
+                description, color
+            )
     return news_id
 
 
-async def update_news(pool: Pool, news_id: int, description: str, color: str) -> bool:
+async def update_news(pool: Pool, news_id: int, description: str, color: str, created_at: Optional[datetime] = None) -> bool:
     async with pool.acquire() as conn:
-        result = await conn.execute(
-            "UPDATE news SET description=$1, color=$2, updated_at=NOW() WHERE id=$3",
-            description, color, news_id
-        )
+        if created_at is not None:
+            result = await conn.execute(
+                "UPDATE news SET description=$1, color=$2, created_at=$3, updated_at=NOW() WHERE id=$4",
+                description, color, created_at, news_id
+            )
+        else:
+            result = await conn.execute(
+                "UPDATE news SET description=$1, color=$2, updated_at=NOW() WHERE id=$3",
+                description, color, news_id
+            )
     return result == "UPDATE 1"
 
 

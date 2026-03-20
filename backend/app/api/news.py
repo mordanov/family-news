@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Q
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 import json
 
 from app.api.auth import get_current_user
@@ -10,6 +11,17 @@ from app.services import news as news_svc, photos as photo_svc
 from app.config import NEWS_COLORS, DEFAULT_COLOR
 
 router = APIRouter(prefix="/api/news", tags=["news"])
+
+
+def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
+    """Parse ISO-8601 / datetime-local string, return None if empty or invalid."""
+    if not value:
+        return None
+    try:
+        # datetime-local sends "YYYY-MM-DDTHH:MM", fromisoformat handles it
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
 
 
 def _normalize_photo(photo: dict | str) -> Optional[dict]:
@@ -63,11 +75,13 @@ async def list_news(
 async def create_news(
     description: str = Form(...),
     color: str = Form(DEFAULT_COLOR),
+    created_at: Optional[str] = Form(default=None),
     photos: list[UploadFile] = File(default=[]),
     _=Depends(get_current_user)
 ):
     pool = await get_pool()
-    news_id = await news_svc.create_news(pool, description, color)
+    parsed_dt = _parse_datetime(created_at)
+    news_id = await news_svc.create_news(pool, description, color, parsed_dt)
     for photo in photos[:10]:
         content = await photo.read()
         if content:
@@ -91,6 +105,7 @@ async def update_news(
     news_id: int,
     description: str = Form(...),
     color: str = Form(DEFAULT_COLOR),
+    created_at: Optional[str] = Form(default=None),
     new_photos: list[UploadFile] = File(default=[]),
     delete_photo_ids: str = Form(default="[]"),
     _=Depends(get_current_user)
@@ -120,7 +135,7 @@ async def update_news(
             filename, thumb = await photo_svc.save_photo(content, photo.filename or "photo.jpg")
             await news_svc.add_photo(pool, news_id, filename, thumb)
 
-    await news_svc.update_news(pool, news_id, description, color)
+    await news_svc.update_news(pool, news_id, description, color, _parse_datetime(created_at))
     item = await news_svc.get_news_by_id(pool, news_id)
     return format_news(item)
 
