@@ -3,7 +3,13 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from app.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# New hashes use pbkdf2_sha256 to avoid bcrypt backend issues in CI/runtime.
+# bcrypt is kept for backward-compatible verification of existing hashes.
+pwd_context = CryptContext(
+    schemes=["pbkdf2_sha256", "bcrypt"],
+    default="pbkdf2_sha256",
+    deprecated="auto",
+)
 
 
 def hash_password(password: str) -> str:
