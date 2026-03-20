@@ -3,7 +3,6 @@ import io
 from unittest.mock import AsyncMock, MagicMock, patch
 from app.services.auth import hash_password, verify_password, create_access_token, decode_token
 from app.services.photos import generate_filename, delete_photo_files
-from app.services.news import format_news_item
 
 
 # ── Auth tests ──────────────────────────────────────────────────────────────

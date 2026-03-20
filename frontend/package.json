@@ -1,0 +1,11 @@
+{
+  "name": "family-news-frontend",
+  "version": "1.0.0",
+  "description": "Family News frontend",
+  "scripts": {
+    "test": "node tests/test_frontend.js",
+    "test:run": "node tests/test_frontend.js"
+  },
+  "private": true
+}
+

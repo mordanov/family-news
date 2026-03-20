@@ -1,17 +1,21 @@
 version: '3.8'
 
+# Local development compose.
+# In production the backend and frontend are built from web-folders/docker-compose.yaml,
+# which uses the shared recipes-db postgres instance.
+
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-newsfeed}
-      POSTGRES_USER: ${POSTGRES_USER:-newsfeed}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-newsfeed123}
+      POSTGRES_DB: ${NEWS_POSTGRES_DB:-news}
+      POSTGRES_USER: ${NEWS_POSTGRES_USER:-news_user}
+      POSTGRES_PASSWORD: ${NEWS_POSTGRES_PASSWORD:-news_dev_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-newsfeed}"]
+      test: ["CMD-SHELL", "pg_isready -U ${NEWS_POSTGRES_USER:-news_user} -d ${NEWS_POSTGRES_DB:-news}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -23,13 +27,19 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    env_file: .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-newsfeed}:${POSTGRES_PASSWORD:-newsfeed123}@postgres:5432/${POSTGRES_DB:-newsfeed}
+      DATABASE_URL: postgresql://${NEWS_POSTGRES_USER:-news_user}:${NEWS_POSTGRES_PASSWORD:-news_dev_password}@postgres:5432/${NEWS_POSTGRES_DB:-news}
+      SECRET_KEY: ${NEWS_SECRET_KEY:-dev-secret-key}
       PHOTOS_DIR: /app/photos
       THUMBNAILS_DIR: /app/photos/thumbnails
+      USER1_LOGIN: ${NEWS_USER1_LOGIN:-admin}
+      USER1_PASSWORD: ${NEWS_USER1_PASSWORD:-admin123}
+      USER2_LOGIN: ${NEWS_USER2_LOGIN:-user}
+      USER2_PASSWORD: ${NEWS_USER2_PASSWORD:-user123}
     volumes:
       - photos_data:/app/photos
+    expose:
+      - "8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,6 +51,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     restart: unless-stopped
+    expose:
+      - "80"
     networks:
       - app_network
 
