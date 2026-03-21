@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 from app.services.auth import hash_password, verify_password, create_access_token, decode_token
 from app.services.photos import generate_filename, delete_photo_files, save_photo
+from fastapi import HTTPException
 
 
 # ── Auth tests ──────────────────────────────────────────────────────────────
@@ -19,12 +20,13 @@ def test_hash_and_verify_password():
 
 
 def test_create_and_decode_token():
-    data = {"sub": "admin", "user_id": 1}
+    data = {"sub": "admin", "user_id": 1, "role": "full_access"}
     token = create_access_token(data)
     assert isinstance(token, str)
     decoded = decode_token(token)
     assert decoded["sub"] == "admin"
     assert decoded["user_id"] == 1
+    assert decoded["role"] == "full_access"
 
 
 def test_decode_invalid_token():
@@ -198,4 +200,42 @@ def test_dynamic_api_responses_disable_cache_headers():
     assert response.headers["Cache-Control"] == "no-store, no-cache, must-revalidate, max-age=0"
     assert response.headers["Pragma"] == "no-cache"
     assert response.headers["Expires"] == "0"
+
+
+# ── Roles & users tests ─────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_require_full_access_allows_admin_role():
+    from app.api.auth import require_full_access
+
+    user = {"user_id": 1, "sub": "admin", "role": "full_access"}
+    result = await require_full_access(user)
+    assert result == user
+
+
+@pytest.mark.asyncio
+async def test_require_full_access_blocks_read_only():
+    from app.api.auth import require_full_access
+
+    with pytest.raises(HTTPException) as ex:
+        await require_full_access({"user_id": 2, "sub": "reader", "role": "read_only"})
+
+    assert ex.value.status_code == 403
+
+
+def test_validate_role_accepts_known_values():
+    from app.api.users import _validate_role
+
+    assert _validate_role("full_access") == "full_access"
+    assert _validate_role("read_only") == "read_only"
+
+
+def test_validate_role_rejects_unknown_value():
+    from app.api.users import _validate_role
+
+    with pytest.raises(HTTPException) as ex:
+        _validate_role("owner")
+
+    assert ex.value.status_code == 400
+
 

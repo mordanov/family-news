@@ -37,6 +37,11 @@ function ensureColorsLoaded() {
 }
 
 export function renderNewsForm(container, onSaved) {
+  if (state.user?.role !== 'full_access') {
+    setState({ showForm: false, editingNews: null });
+    return;
+  }
+
   const editing = state.editingNews;
   const isEdit = !!editing;
   const hasColors = Array.isArray(state.colors) && state.colors.length > 0;

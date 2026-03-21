@@ -13,6 +13,8 @@ export const state = {
   lightboxIndex: 0,
   editingNews: null,   // news object being edited
   showForm: false,
+  showUsersManager: false,
+  users: [],
 };
 
 const listeners = new Set();

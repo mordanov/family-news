@@ -5,7 +5,7 @@ from typing import Optional
 from datetime import datetime
 import json
 
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, require_full_access
 from app.database import get_pool
 from app.services import news as news_svc, photos as photo_svc
 from app.config import NEWS_COLORS, DEFAULT_COLOR
@@ -78,7 +78,7 @@ async def create_news(
     color: str = Form(DEFAULT_COLOR),
     created_at: Optional[str] = Form(default=None),
     photos: list[UploadFile] = File(default=[]),
-    current_user=Depends(get_current_user)
+    current_user=Depends(require_full_access)
 ):
     pool = await get_pool()
     parsed_dt = _parse_datetime(created_at)
@@ -109,7 +109,7 @@ async def update_news(
     created_at: Optional[str] = Form(default=None),
     new_photos: list[UploadFile] = File(default=[]),
     delete_photo_ids: str = Form(default="[]"),
-    _=Depends(get_current_user)
+    _=Depends(require_full_access)
 ):
     pool = await get_pool()
     item = await news_svc.get_news_by_id(pool, news_id)
@@ -142,7 +142,7 @@ async def update_news(
 
 
 @router.delete("/{news_id}", status_code=204)
-async def delete_news(news_id: int, _=Depends(get_current_user)):
+async def delete_news(news_id: int, _=Depends(require_full_access)):
     pool = await get_pool()
     photos = await news_svc.get_news_photos(pool, news_id)
     deleted = await news_svc.delete_news(pool, news_id)
@@ -153,7 +153,7 @@ async def delete_news(news_id: int, _=Depends(get_current_user)):
 
 
 @router.delete("/{news_id}/photos/{photo_id}", status_code=204)
-async def delete_photo(news_id: int, photo_id: int, _=Depends(get_current_user)):
+async def delete_photo(news_id: int, photo_id: int, _=Depends(require_full_access)):
     pool = await get_pool()
     deleted = await news_svc.delete_photo(pool, photo_id)
     if not deleted:

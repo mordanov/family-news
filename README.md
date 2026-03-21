@@ -123,6 +123,44 @@ newsfeed/
 Authorization: Bearer <token>
 ```
 
+### Пользователи и роли
+
+**Роли доступа:**
+- `full_access` — полный доступ: создание, редактирование, удаление новостей, управление пользователями
+- `read_only` — только чтение новостей
+
+**Все текущие пользователи** при обновлении получают роль `full_access` автоматически.  
+**Гарантия:** всегда должен оставаться **минимум один** пользователь с `full_access`.
+
+| Метод | Путь | Роль | Описание |
+|-------|------|------|----------|
+| GET | `/api/users` | `full_access` | Список всех пользователей |
+| POST | `/api/users` | `full_access` | Создать пользователя (уникальный логин, роль по умолчанию `read_only`) |
+| PATCH | `/api/users/{id}/role` | `full_access` | Изменить роль пользователя |
+| DELETE | `/api/users/{id}` | `full_access` | Удалить пользователя (не себя, не последнего full_access) |
+
+**Пример создания пользователя:**
+```bash
+curl -X POST http://localhost:8080/api/users \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"login":"papa","password":"secret","role":"read_only"}'
+```
+
+**Пример смены роли:**
+```bash
+curl -X PATCH http://localhost:8080/api/users/3/role \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"role":"full_access"}'
+```
+
+**В интерфейсе:**
+- Кнопка **«Пользователи»** (видна только для `full_access`)
+- Модалка управления пользователями: создание, смена роли, удаление
+- Бейдж роли в хедере (🔑 Полный доступ / 👁️ Только чтение)
+- Для `read_only`: скрыты кнопки «+ Добавить», редактирования/удаления новостей
+
 Каждая новость в ответе API содержит поле `author` (строка с логином автора на момент создания новости):
 
 ```json
@@ -190,19 +228,36 @@ cd backend && pip install -r requirements.txt && pytest -v
 - Пароли хранятся как bcrypt хеши
 - Доступа по умолчанию нет — только пользователи из `.env`
 - Токен действует 24 часа
+- **Управление доступом**: `full_access` контролирует CRUD новостей и пользователей, `read_only` — только чтение
+- **Роли в JWT**: включены в токен и переподтверждаются на сервере при каждом запросе
 
 ---
 
 ## Добавление пользователей
 
-Пользователи создаются **при первом запуске** из `.env`. Если нужно добавить ещё — подключитесь к БД напрямую:
+Пользователи создаются **при первом запуске** из `.env` с ролью `full_access`.
+
+**Через интерфейс** (для `full_access`):
+1. Нажмите кнопку «Пользователи» в хедере
+2. Заполните логин, пароль, выберите роль
+3. Нажмите «Добавить пользователя»
+
+**Через API** (curl, используя токен `full_access`):
+```bash
+curl -X POST http://localhost:8080/api/users \
+  -H "Authorization: Bearer <ваш_токен>" \
+  -H "Content-Type: application/json" \
+  -d '{"login":"новый","password":"pass123","role":"read_only"}'
+```
+
+**Напрямую в БД** (если нужна срочная правка):
 
 ```bash
 docker compose exec postgres psql -U newsfeed -d newsfeed
 ```
 ```sql
-INSERT INTO users (login, password_hash)
-VALUES ('новый_логин', '<bcrypt_hash>');
+INSERT INTO users (login, password_hash, role)
+VALUES ('новый_логин', '<bcrypt_hash>', 'full_access');
 ```
 
 Сгенерировать bcrypt hash:

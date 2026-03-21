@@ -4,6 +4,7 @@ import { renderLogin } from '/components/Login.js';
 import { renderFeed, loadPage } from '/components/Feed.js';
 import { renderNewsForm } from '/components/NewsForm.js';
 import { renderLightbox } from '/components/Lightbox.js';
+import { renderUsersManager } from '/components/UsersManager.js';
 
 const appEl = document.getElementById('app');
 const formEl = document.getElementById('form-mount');
@@ -35,6 +36,12 @@ async function bootstrapAuthenticatedState() {
   return bootstrapPromise;
 }
 
+async function loadUsersForManager() {
+  if (state.user?.role !== 'full_access') return;
+  const users = await api.getUsers();
+  setState({ users: Array.isArray(users) ? users : [] });
+}
+
 async function init() {
   if (state.token) {
     await bootstrapAuthenticatedState();
@@ -49,6 +56,7 @@ function render(s) {
     renderLogin(appEl);
     formEl.innerHTML = '';
     lbEl.innerHTML = '';
+    colorMap = {};
     return;
   }
 
@@ -58,8 +66,12 @@ function render(s) {
 
   renderApp(s);
 
-  // Modal form
-  if (s.showForm) {
+  // Modal form / users manager
+  if (s.showUsersManager) {
+    renderUsersManager(formEl, async () => {
+      await loadUsersForManager();
+    });
+  } else if (s.showForm) {
     renderNewsForm(formEl, async () => {
       await loadPage(s.page);
     });
@@ -76,6 +88,7 @@ function render(s) {
 }
 
 function renderApp(s) {
+  const canManage = s.user?.role === 'full_access';
   const feedEl = document.getElementById('feed-container');
   if (!feedEl) {
     appEl.innerHTML = `
@@ -91,7 +104,9 @@ function renderApp(s) {
           </div>
           <div class="header-right">
             <span class="header-user">${s.user?.login || ''}</span>
-            <button id="btn-add" class="btn-primary btn-add">+ Добавить</button>
+            <span class="header-role" style="font-size:12px; color:#666;">${s.user?.role === 'full_access' ? '🔑 Полный доступ' : '👁️ Только чтение'}</span>
+            ${canManage ? '<button id="btn-users" class="btn-secondary" title="Пользователи">Пользователи</button>' : ''}
+            ${canManage ? '<button id="btn-add" class="btn-primary btn-add">+ Добавить</button>' : ''}
             <button id="btn-logout" class="btn-ghost" title="Выйти">Выйти</button>
           </div>
         </div>
@@ -100,12 +115,22 @@ function renderApp(s) {
         <div id="feed-container" class="feed-container"></div>
       </main>
     `;
-    document.getElementById('btn-add').addEventListener('click', () => {
-      setState({ showForm: true, editingNews: null });
-    });
+    if (canManage) {
+      document.getElementById('btn-add').addEventListener('click', () => {
+        setState({ showForm: true, editingNews: null, showUsersManager: false });
+      });
+      document.getElementById('btn-users').addEventListener('click', async () => {
+        try {
+          await loadUsersForManager();
+          setState({ showUsersManager: true, showForm: false });
+        } catch (e) {
+          alert(e.message || 'Не удалось загрузить пользователей');
+        }
+      });
+    }
     document.getElementById('btn-logout').addEventListener('click', () => {
       localStorage.removeItem('token');
-      setState({ token: null, user: null, news: [], showForm: false });
+      setState({ token: null, user: null, news: [], users: [], showForm: false, showUsersManager: false });
     });
   }
 

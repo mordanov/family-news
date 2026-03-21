@@ -3,6 +3,8 @@ import { state, setState } from '/state.js';
 import { renderNewsCard } from './NewsCard.js';
 
 export function renderFeed(container, colorMap) {
+  const canManage = state.user?.role === 'full_access';
+
   if (state.loading) {
     container.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
     return;
@@ -32,7 +34,11 @@ export function renderFeed(container, colorMap) {
           <circle cx="32" cy="32" r="30" stroke="#006D5B" stroke-width="2" opacity="0.3"/>
           <path d="M20 32h24M32 20v24" stroke="#006D5B" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
         </svg>
-        <p>Новостей пока нет.<br>Нажмите «Добавить», чтобы создать первую!</p>
+        <p>
+          ${canManage
+            ? 'Новостей пока нет.<br>Нажмите «Добавить», чтобы создать первую!'
+            : 'Новостей пока нет.'}
+        </p>
       </div>`;
     return;
   }
@@ -46,6 +52,7 @@ export function renderFeed(container, colorMap) {
       colorMap,
       (n) => setState({ editingNews: n, showForm: true }),
       async (n) => {
+        if (!canManage) return;
         if (!confirm(`Удалить новость?\n\n«${n.description.slice(0, 60)}…»`)) return;
         try {
           await api.deleteNews(n.id);
@@ -53,7 +60,8 @@ export function renderFeed(container, colorMap) {
         } catch (e) {
           alert('Ошибка удаления: ' + e.message);
         }
-      }
+      },
+      canManage
     );
     feed.appendChild(card);
   });

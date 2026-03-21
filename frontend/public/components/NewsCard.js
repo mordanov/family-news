@@ -1,6 +1,6 @@
 import { setState } from '/state.js';
 
-export function renderNewsCard(news, colorMap, onEdit, onDelete) {
+export function renderNewsCard(news, colorMap, onEdit, onDelete, canManage = true) {
   const colorVal = colorMap[news.color] || '#F59E0B';
   const date = formatDate(news.created_at);
   const edited = news.updated_at && news.updated_at !== news.created_at;
@@ -15,10 +15,12 @@ export function renderNewsCard(news, colorMap, onEdit, onDelete) {
       <div class="card-meta">
         <time class="card-date" title="${formatDateFull(news.created_at)}">${date}</time>
         ${edited ? `<span class="card-edited" title="Изменено: ${formatDateFull(news.updated_at)}">изм.</span>` : ''}
+        ${canManage ? `
         <div class="card-actions">
           <button class="btn-icon-sm" data-action="edit" title="Редактировать">✎</button>
           <button class="btn-icon-sm danger" data-action="delete" title="Удалить">✕</button>
         </div>
+        ` : ''}
       </div>
 
       <p class="card-desc">${escHtml(news.description)}</p>
@@ -38,8 +40,10 @@ export function renderNewsCard(news, colorMap, onEdit, onDelete) {
   `;
 
   // Actions
-  card.querySelector('[data-action="edit"]').addEventListener('click', () => onEdit(news));
-  card.querySelector('[data-action="delete"]').addEventListener('click', () => onDelete(news));
+  if (canManage) {
+    card.querySelector('[data-action="edit"]').addEventListener('click', () => onEdit(news));
+    card.querySelector('[data-action="delete"]').addEventListener('click', () => onDelete(news));
+  }
 
   // Lightbox
   const photoUrls = (news.photos || []).map(p => p.url).filter(Boolean);

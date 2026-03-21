@@ -43,6 +43,8 @@ CREATE_TABLES_SQL = [
         id SERIAL PRIMARY KEY,
         login VARCHAR(100) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(20) NOT NULL DEFAULT 'full_access',
+        CONSTRAINT users_role_check CHECK (role IN ('full_access', 'read_only')),
         created_at TIMESTAMPTZ DEFAULT NOW()
     );
     """,
@@ -74,6 +76,13 @@ async def init_db():
         # asyncpg.execute expects a single statement; run DDL sequentially.
         for statement in CREATE_TABLES_SQL:
             await conn.execute(statement)
+        await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20)")
+        await conn.execute("UPDATE users SET role='full_access' WHERE role IS NULL OR role = ''")
+        await conn.execute("UPDATE users SET role='full_access' WHERE role NOT IN ('full_access', 'read_only')")
+        await conn.execute("ALTER TABLE users ALTER COLUMN role SET DEFAULT 'full_access'")
+        await conn.execute("ALTER TABLE users ALTER COLUMN role SET NOT NULL")
+        await conn.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check")
+        await conn.execute("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('full_access', 'read_only'))")
         await conn.execute("ALTER TABLE news ADD COLUMN IF NOT EXISTS author VARCHAR(100)")
         await conn.execute("UPDATE news SET author='admin' WHERE author IS NULL OR author = ''")
         await conn.execute("ALTER TABLE news ALTER COLUMN author SET DEFAULT 'admin'")

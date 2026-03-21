@@ -78,4 +78,20 @@ export const api = {
   async deletePhoto(newsId, photoId) {
     return request('DELETE', `/news/${newsId}/photos/${photoId}`);
   },
+
+  async getUsers() {
+    return request('GET', '/users');
+  },
+
+  async createUser(payload) {
+    return request('POST', '/users', payload);
+  },
+
+  async deleteUser(id) {
+    return request('DELETE', `/users/${id}`);
+  },
+
+  async updateUserRole(id, role) {
+    return request('PATCH', `/users/${id}/role`, { role });
+  },
 };
