@@ -14,6 +14,7 @@ let colorMap = {};
 async function init() {
   if (state.token) {
     try {
+      setState({ loading: true });
       const me = await api.me();
       setState({ user: me });
       const colors = await api.getColors();
@@ -22,7 +23,7 @@ async function init() {
       await loadPage(1);
     } catch {
       localStorage.removeItem('token');
-      setState({ token: null });
+      setState({ token: null, loading: false });
     }
   }
   render(state);
