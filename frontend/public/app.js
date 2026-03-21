@@ -10,51 +10,20 @@ const formEl = document.getElementById('form-mount');
 const lbEl = document.getElementById('lightbox-mount');
 
 let colorMap = {};
-let bootstrapPromise = null;
-let bootstrappedToken = null;
-let bootstrapFailedToken = null;
-
-async function bootstrapAuthenticatedState() {
-  if (!state.token) return;
-  if (bootstrapPromise) return bootstrapPromise;
-  if (bootstrappedToken === state.token && state.user) return;
-  if (bootstrapFailedToken === state.token && !state.user) return;
-
-  const activeToken = state.token;
-  bootstrapPromise = (async () => {
-    try {
-      setState({ loading: true, loadError: null });
-      const me = await api.me();
-      const colors = await api.getColors();
-      colorMap = Object.fromEntries(colors.map(c => [c.id, c.value]));
-      setState({ user: me, colors });
-      await loadPage(1);
-      bootstrappedToken = activeToken;
-      bootstrapFailedToken = null;
-    } catch (e) {
-      if (e?.code === 'UNAUTHORIZED') {
-        localStorage.removeItem('token');
-        colorMap = {};
-        bootstrappedToken = null;
-        bootstrapFailedToken = null;
-        setState({ token: null, user: null, loading: false });
-        return;
-      }
-
-      bootstrapFailedToken = activeToken;
-      setState({ loading: false, loadError: e?.message || 'Не удалось загрузить данные профиля.' });
-      return;
-    } finally {
-      bootstrapPromise = null;
-    }
-  })();
-
-  return bootstrapPromise;
-}
 
 async function init() {
   if (state.token) {
-    await bootstrapAuthenticatedState();
+    try {
+      const me = await api.me();
+      setState({ user: me });
+      const colors = await api.getColors();
+      setState({ colors });
+      colorMap = Object.fromEntries(colors.map(c => [c.id, c.value]));
+      await loadPage(1);
+    } catch {
+      localStorage.removeItem('token');
+      setState({ token: null });
+    }
   }
   render(state);
 }
@@ -66,14 +35,7 @@ function render(s) {
     renderLogin(appEl);
     formEl.innerHTML = '';
     lbEl.innerHTML = '';
-    colorMap = {};
-    bootstrappedToken = null;
-    bootstrapFailedToken = null;
     return;
-  }
-
-  if (!s.user && !bootstrapPromise) {
-    void bootstrapAuthenticatedState();
   }
 
   renderApp(s);
