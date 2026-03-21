@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
@@ -19,6 +19,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Family Newsfeed", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def disable_cache_for_dynamic_api(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/api/") and not request.url.path.startswith("/api/photos"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 app.add_middleware(
     CORSMiddleware,

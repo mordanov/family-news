@@ -1,6 +1,8 @@
 import pytest
 import io
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
+from fastapi.testclient import TestClient
 from app.services.auth import hash_password, verify_password, create_access_token, decode_token
 from app.services.photos import generate_filename, delete_photo_files
 
@@ -152,3 +154,25 @@ def test_default_color_in_palette():
     from app.config import NEWS_COLORS, DEFAULT_COLOR
     ids = [c["id"] for c in NEWS_COLORS]
     assert DEFAULT_COLOR in ids
+
+
+def test_dynamic_api_responses_disable_cache_headers():
+    from app.main import app
+
+    @asynccontextmanager
+    async def no_lifespan(_app):
+        yield
+
+    original_lifespan = app.router.lifespan_context
+    app.router.lifespan_context = no_lifespan
+    try:
+        with TestClient(app) as client:
+            response = client.get("/api/health")
+    finally:
+        app.router.lifespan_context = original_lifespan
+
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-store, no-cache, must-revalidate, max-age=0"
+    assert response.headers["Pragma"] == "no-cache"
+    assert response.headers["Expires"] == "0"
+

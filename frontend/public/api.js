@@ -1,4 +1,15 @@
 const BASE = '/api';
+const RETRYABLE_METHODS = new Set(['GET', 'HEAD']);
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+const RETRY_DELAYS_MS = [500, 1000, 2000, 4000];
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function canRetry(method, status) {
+  return RETRYABLE_METHODS.has(method) && RETRYABLE_STATUSES.has(status);
+}
 
 function getToken() {
   return localStorage.getItem('token');
@@ -11,26 +22,45 @@ function authHeaders() {
 async function request(method, path, body, isFormData = false) {
   const headers = authHeaders();
   if (!isFormData) headers['Content-Type'] = 'application/json';
+  const retryCount = RETRYABLE_METHODS.has(method) ? RETRY_DELAYS_MS.length : 0;
 
-  const resp = await fetch(BASE + path, {
-    method,
-    headers,
-    body: body && !isFormData ? JSON.stringify(body) : body,
-  });
+  for (let attempt = 0; attempt <= retryCount; attempt++) {
+    let resp;
 
-  if (resp.status === 401) {
-    localStorage.removeItem('token');
-    window.location.href = '/';
-    return;
+    try {
+      resp = await fetch(BASE + path, {
+        method,
+        headers,
+        body: body && !isFormData ? JSON.stringify(body) : body,
+        cache: 'no-store',
+      });
+    } catch (error) {
+      if (attempt < retryCount) {
+        await sleep(RETRY_DELAYS_MS[attempt]);
+        continue;
+      }
+      throw new Error('Сервер временно недоступен. Попробуйте ещё раз через несколько секунд.');
+    }
+
+    if (resp.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/';
+      return;
+    }
+
+    if (canRetry(method, resp.status) && attempt < retryCount) {
+      await sleep(RETRY_DELAYS_MS[attempt]);
+      continue;
+    }
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || 'Ошибка запроса');
+    }
+
+    if (resp.status === 204) return null;
+    return resp.json();
   }
-
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-    throw new Error(err.detail || 'Ошибка запроса');
-  }
-
-  if (resp.status === 204) return null;
-  return resp.json();
 }
 
 export const api = {

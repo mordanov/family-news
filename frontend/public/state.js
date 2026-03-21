@@ -7,6 +7,7 @@ export const state = {
   pages: 1,
   colors: [],
   loading: false,
+  loadError: null,
   lightboxUrl: null,
   lightboxPhotos: [],
   lightboxIndex: 0,

@@ -8,6 +8,23 @@ export function renderFeed(container, colorMap) {
     return;
   }
 
+  if (state.loadError && !state.news.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+          <circle cx="32" cy="32" r="30" stroke="#C2410C" stroke-width="2" opacity="0.25"/>
+          <path d="M32 18v18" stroke="#C2410C" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="32" cy="45" r="2.5" fill="#C2410C"/>
+        </svg>
+        <p>Не удалось загрузить новости.<br>${state.loadError}</p>
+        <button id="retry-feed-load" class="btn-primary" type="button">Повторить</button>
+      </div>`;
+    document.getElementById('retry-feed-load')?.addEventListener('click', () => {
+      loadPage(state.page || 1);
+    });
+    return;
+  }
+
   if (!state.news.length) {
     container.innerHTML = `
       <div class="empty-state">
@@ -57,7 +74,7 @@ export function renderFeed(container, colorMap) {
 }
 
 export async function loadPage(page) {
-  setState({ loading: true });
+  setState({ loading: true, loadError: null });
   try {
     const data = await api.getNews(page);
     setState({
@@ -65,10 +82,11 @@ export async function loadPage(page) {
       total: data.total,
       page: data.page,
       pages: data.pages,
+      loadError: null,
       loading: false,
     });
   } catch (e) {
-    setState({ loading: false });
+    setState({ loading: false, loadError: e.message || 'Попробуйте обновить страницу чуть позже.' });
     console.error(e);
   }
 }
