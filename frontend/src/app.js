@@ -12,11 +12,13 @@ const lbEl = document.getElementById('lightbox-mount');
 let colorMap = {};
 let bootstrapPromise = null;
 let bootstrappedToken = null;
+let bootstrapFailedToken = null;
 
 async function bootstrapAuthenticatedState() {
   if (!state.token) return;
   if (bootstrapPromise) return bootstrapPromise;
   if (bootstrappedToken === state.token && state.user) return;
+  if (bootstrapFailedToken === state.token && !state.user) return;
 
   const activeToken = state.token;
   bootstrapPromise = (async () => {
@@ -28,11 +30,21 @@ async function bootstrapAuthenticatedState() {
       setState({ user: me, colors });
       await loadPage(1);
       bootstrappedToken = activeToken;
-    } catch {
-      localStorage.removeItem('token');
-      colorMap = {};
-      bootstrappedToken = null;
-      setState({ token: null, user: null, loading: false });
+      bootstrapFailedToken = null;
+    } catch (e) {
+      if (e?.code === 'UNAUTHORIZED') {
+        localStorage.removeItem('token');
+        colorMap = {};
+        bootstrappedToken = null;
+        bootstrapFailedToken = null;
+        setState({ token: null, user: null, loading: false });
+        return;
+      }
+
+      bootstrapFailedToken = activeToken;
+      setState({ loading: false, loadError: e?.message || 'Не удалось загрузить данные профиля.' });
+      return;
+
     } finally {
       bootstrapPromise = null;
     }
@@ -57,6 +69,7 @@ function render(s) {
     lbEl.innerHTML = '';
     colorMap = {};
     bootstrappedToken = null;
+    bootstrapFailedToken = null;
     return;
   }
 

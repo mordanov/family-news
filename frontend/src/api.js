@@ -19,9 +19,10 @@ async function request(method, path, body, isFormData = false) {
   });
 
   if (resp.status === 401) {
-    localStorage.removeItem('token');
-    window.location.href = '/';
-    return;
+    const err = await resp.json().catch(() => ({}));
+    const unauthorized = new Error(err.detail || 'Сессия истекла. Войдите снова.');
+    unauthorized.code = 'UNAUTHORIZED';
+    throw unauthorized;
   }
 
   if (!resp.ok) {
