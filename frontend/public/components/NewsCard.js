@@ -4,6 +4,13 @@ export function renderNewsCard(news, colorMap, onEdit, onRotateLink, onDelete, c
   const colorVal = colorMap[news.color] || '#F59E0B';
   const date = formatDate(news.created_at);
   const edited = news.updated_at && news.updated_at !== news.created_at;
+  const mediaItems = Array.isArray(news.media) && news.media.length > 0 ? news.media : (news.photos || []);
+  const imageIndexByUrl = new Map();
+  mediaItems.forEach(item => {
+    if ((item.media_kind || 'image') === 'image' && item.url && !imageIndexByUrl.has(item.url)) {
+      imageIndexByUrl.set(item.url, imageIndexByUrl.size);
+    }
+  });
 
   const card = document.createElement('article');
   card.className = 'news-card';
@@ -37,13 +44,9 @@ export function renderNewsCard(news, colorMap, onEdit, onRotateLink, onDelete, c
 
       <p class="card-desc">${escHtml(news.description)}</p>
 
-      ${news.photos && news.photos.length > 0 ? `
+      ${mediaItems.length > 0 ? `
         <div class="card-photos">
-          ${news.photos.map((p, i) => `
-            <button class="photo-thumb-btn" data-src="${p.url}" data-idx="${i}" title="Открыть фото">
-              <img src="${p.thumbnail_url}" alt="фото" loading="lazy" class="photo-thumb"/>
-            </button>
-          `).join('')}
+          ${mediaItems.map((item, i) => renderMediaItem(item, i, imageIndexByUrl)).join('')}
         </div>
       ` : ''}
 
@@ -73,14 +76,16 @@ export function renderNewsCard(news, colorMap, onEdit, onRotateLink, onDelete, c
   }
 
   // Lightbox
-  const photoUrls = (news.photos || []).map(p => p.url).filter(Boolean);
+  const imageItems = mediaItems.filter(item => (item.media_kind || 'image') === 'image' && item.url);
+  const photoUrls = imageItems.map(item => item.url);
   card.querySelectorAll('.photo-thumb-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const index = Number(btn.dataset.idx) || 0;
+      const imageIndex = Number(btn.dataset.imageIdx);
+      if (!Number.isFinite(imageIndex)) return;
       setState({
         lightboxUrl: btn.dataset.src,
         lightboxPhotos: photoUrls,
-        lightboxIndex: index,
+        lightboxIndex: imageIndex,
       });
     });
   });
@@ -102,6 +107,34 @@ function formatDateFull(iso) {
 
 function escHtml(str) {
   return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderMediaItem(item, index, imageIndexByUrl) {
+  const kind = item.media_kind || 'image';
+  if (kind === 'video') {
+    const posterAttr = item.thumbnail_url ? ` poster="${item.thumbnail_url}"` : '';
+    return `
+      <div class="media-video-wrap" data-idx="${index}">
+        <video src="${item.url}"${posterAttr} controls preload="metadata" class="media-video" title="Видео"></video>
+      </div>
+    `;
+  }
+
+  if (kind === 'audio') {
+    return `
+      <div class="media-audio-wrap" data-idx="${index}">
+        <audio src="${item.url}" controls preload="metadata" class="media-audio"></audio>
+      </div>
+    `;
+  }
+
+  const thumb = item.thumbnail_url || item.url;
+  const imageIdx = imageIndexByUrl.get(item.url) ?? 0;
+  return `
+    <button class="photo-thumb-btn" data-src="${item.url}" data-image-idx="${imageIdx}" title="Открыть фото">
+      <img src="${thumb}" alt="фото" loading="lazy" class="photo-thumb"/>
+    </button>
+  `;
 }
 
 async function copyToClipboard(text) {

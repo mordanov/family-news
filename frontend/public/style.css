@@ -386,8 +386,26 @@ body {
   display: block;
   border-radius: 8px;
 }
+.media-video-wrap {
+  width: min(280px, 100%);
+}
+.media-video {
+  width: 100%;
+  max-width: 280px;
+  border-radius: 8px;
+  background: #000;
+  display: block;
+}
+.media-audio-wrap {
+  min-width: 220px;
+  max-width: 320px;
+}
+.media-audio {
+  width: 100%;
+}
 @media (max-width: 480px) {
   .photo-thumb { width: 72px; height: 72px; }
+  .media-audio-wrap { min-width: 180px; }
 }
 
 /* ── Lightbox ───────────────────────────────────────────────────────── */
@@ -595,6 +613,8 @@ body {
 .preview-wrap {
   position: relative;
   display: inline-block;
+  min-width: 80px;
+  max-width: 160px;
 }
 .preview-thumb {
   width: 80px;
@@ -619,6 +639,28 @@ body {
   align-items: center;
   justify-content: center;
   line-height: 1;
+}
+.preview-file-badge,
+.existing-file-badge {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  background: var(--teal-muted);
+  border: 1px solid var(--teal-border);
+  color: var(--teal-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.preview-file-name {
+  margin-top: 4px;
+  max-width: 80px;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  color: var(--text-muted);
+  word-break: break-word;
 }
 
 .existing-photos {

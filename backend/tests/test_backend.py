@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 from PIL import Image
 from app.services.auth import hash_password, verify_password, create_access_token, decode_token
-from app.services.photos import generate_filename, delete_photo_files, save_photo
+from app.services.photos import generate_filename, delete_photo_files, save_photo, save_media
 from fastapi import HTTPException
 
 
@@ -61,6 +61,21 @@ def test_generate_filename_default_ext():
     assert filename.endswith(".jpg")
 
 
+def test_detect_media_kind_by_mime():
+    from app.services.photos import detect_media_kind
+
+    assert detect_media_kind("image/jpeg") == "image"
+    assert detect_media_kind("video/mp4") == "video"
+    assert detect_media_kind("audio/mpeg") == "audio"
+    assert detect_media_kind("application/pdf") is None
+
+
+def test_video_thumbnail_name_uses_jpg_extension():
+    from app.services.photos import _video_thumbnail_name
+
+    assert _video_thumbnail_name("abc123.mp4") == "thumb_abc123.jpg"
+
+
 def test_delete_photo_files_missing_files():
     # Should not raise even if files don't exist
     delete_photo_files("nonexistent.jpg", "thumb_nonexistent.jpg")
@@ -100,6 +115,21 @@ async def test_save_photo_thumbnail_applies_exif_orientation(tmp_path):
     with Image.open(thumb_path) as thumb:
         # Without EXIF transpose this would remain landscape (120, 60).
         assert thumb.height > thumb.width
+
+
+@pytest.mark.asyncio
+async def test_save_media_video_generates_thumbnail_with_ffmpeg(tmp_path):
+    payload = b"fake-video-bytes"
+
+    with patch("app.services.photos.PHOTOS_DIR", str(tmp_path)), \
+         patch("app.services.photos.THUMBNAILS_DIR", str(tmp_path / "thumbs")), \
+         patch("app.services.photos.generate_video_thumbnail") as gen_thumb:
+        filename, thumb, media_kind = await save_media(payload, "clip.mp4", "video/mp4")
+
+    assert media_kind == "video"
+    assert filename.endswith(".mp4")
+    assert thumb.endswith(".jpg")
+    gen_thumb.assert_called_once()
 
 
 # ── News service tests ───────────────────────────────────────────────────────

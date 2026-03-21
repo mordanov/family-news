@@ -1,6 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 import json
@@ -8,10 +6,20 @@ import json
 from app.api.auth import get_current_user, require_full_access
 from app.database import get_pool
 from app.services import news as news_svc, photos as photo_svc
-from app.config import NEWS_COLORS, DEFAULT_COLOR
+from app.config import (
+    NEWS_COLORS,
+    DEFAULT_COLOR,
+    ALLOWED_IMAGE_MIME,
+    ALLOWED_VIDEO_MIME,
+    ALLOWED_AUDIO_MIME,
+    MAX_IMAGE_BYTES,
+    MAX_VIDEO_BYTES,
+    MAX_AUDIO_BYTES,
+)
 
 router = APIRouter(prefix="/api/news", tags=["news"])
 MAX_NEWS_PHOTOS = 100
+ALLOWED_MEDIA_MIME = ALLOWED_IMAGE_MIME | ALLOWED_VIDEO_MIME | ALLOWED_AUDIO_MIME
 
 
 def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
@@ -35,11 +43,48 @@ def _normalize_photo(photo: dict | str) -> Optional[dict]:
         return None
     if "id" not in photo or "filename" not in photo or "thumbnail_filename" not in photo:
         return None
+
+    media_kind = photo.get("media_kind")
+    if not media_kind:
+        mime_type = (photo.get("mime_type") or "").lower()
+        if mime_type.startswith("video/"):
+            media_kind = "video"
+        elif mime_type.startswith("audio/"):
+            media_kind = "audio"
+        else:
+            media_kind = "image"
+
+    thumb_name = photo.get("thumbnail_filename")
+    thumbnail_url = None
+    if media_kind in {"image", "video"} and thumb_name:
+        if thumb_name == photo.get("filename") and media_kind == "video":
+            thumbnail_url = f"/api/photos/{photo['filename']}"
+        else:
+            thumbnail_url = f"/api/photos/thumbnails/{thumb_name}"
     return {
         "id": photo["id"],
+        "media_kind": media_kind,
+        "mime_type": photo.get("mime_type"),
+        "size_bytes": int(photo.get("size_bytes") or 0),
         "url": f"/api/photos/{photo['filename']}",
-        "thumbnail_url": f"/api/photos/thumbnails/{photo['thumbnail_filename']}",
+        "thumbnail_url": thumbnail_url,
     }
+
+
+def _validate_upload(media_file: UploadFile, content: bytes):
+    mime_type = (media_file.content_type or "").lower()
+    if mime_type not in ALLOWED_MEDIA_MIME:
+        raise HTTPException(400, f"Неподдерживаемый тип файла: {mime_type or 'unknown'}")
+
+    size = len(content)
+    if mime_type in ALLOWED_IMAGE_MIME and size > MAX_IMAGE_BYTES:
+        raise HTTPException(400, "Слишком большое изображение")
+    if mime_type in ALLOWED_VIDEO_MIME and size > MAX_VIDEO_BYTES:
+        raise HTTPException(400, "Слишком большое видео")
+    if mime_type in ALLOWED_AUDIO_MIME and size > MAX_AUDIO_BYTES:
+        raise HTTPException(400, "Слишком большой аудиофайл")
+
+    return mime_type
 
 
 def _parse_publish_flag(value: Optional[str]) -> bool:
@@ -49,8 +94,9 @@ def _parse_publish_flag(value: Optional[str]) -> bool:
 
 
 def format_news(item: dict) -> dict:
-    photos = item.get("photos") or []
-    normalized_photos = [p for p in (_normalize_photo(photo) for photo in photos) if p is not None]
+    attachments = item.get("photos") or []
+    normalized_media = [p for p in (_normalize_photo(photo) for photo in attachments) if p is not None]
+    normalized_photos = [m for m in normalized_media if m.get("media_kind") == "image"]
     return {
         "id": item["id"],
         "description": item["description"],
@@ -60,6 +106,7 @@ def format_news(item: dict) -> dict:
         "author": item.get("author"),
         "is_published": bool(item.get("is_published")),
         "public_token": item.get("public_token"),
+        "media": normalized_media,
         "photos": normalized_photos,
     }
 
@@ -88,17 +135,24 @@ async def create_news(
     created_at: Optional[str] = Form(default=None),
     is_published: Optional[str] = Form(default=None),
     photos: list[UploadFile] = File(default=[]),
+    media: list[UploadFile] = File(default=[]),
     current_user=Depends(require_full_access)
 ):
     pool = await get_pool()
     parsed_dt = _parse_datetime(created_at)
     parsed_publish = _parse_publish_flag(is_published)
     news_id = await news_svc.create_news(pool, description, str(current_user["sub"]), color, parsed_dt, parsed_publish)
-    for photo in photos[:MAX_NEWS_PHOTOS]:
-        content = await photo.read()
+    upload_items = [*media, *photos]
+    for media_file in upload_items[:MAX_NEWS_PHOTOS]:
+        content = await media_file.read()
         if content:
-            filename, thumb = await photo_svc.save_photo(content, photo.filename or "photo.jpg")
-            await news_svc.add_photo(pool, news_id, filename, thumb)
+            mime_type = _validate_upload(media_file, content)
+            filename, thumb, media_kind = await photo_svc.save_media(
+                content,
+                media_file.filename or "file.bin",
+                mime_type,
+            )
+            await news_svc.add_photo(pool, news_id, filename, thumb, media_kind, mime_type, len(content))
     item = await news_svc.get_news_by_id(pool, news_id)
     return format_news(item)
 
@@ -120,6 +174,7 @@ async def update_news(
     created_at: Optional[str] = Form(default=None),
     is_published: Optional[str] = Form(default=None),
     new_photos: list[UploadFile] = File(default=[]),
+    new_media: list[UploadFile] = File(default=[]),
     delete_photo_ids: str = Form(default="[]"),
     _=Depends(require_full_access)
 ):
@@ -142,11 +197,17 @@ async def update_news(
     # Add new photos
     current_count = len((item.get("photos") or []))
     remaining_slots = max(0, MAX_NEWS_PHOTOS - current_count + len(to_delete))
-    for photo in new_photos[:remaining_slots]:
-        content = await photo.read()
+    upload_items = [*new_media, *new_photos]
+    for media_file in upload_items[:remaining_slots]:
+        content = await media_file.read()
         if content:
-            filename, thumb = await photo_svc.save_photo(content, photo.filename or "photo.jpg")
-            await news_svc.add_photo(pool, news_id, filename, thumb)
+            mime_type = _validate_upload(media_file, content)
+            filename, thumb, media_kind = await photo_svc.save_media(
+                content,
+                media_file.filename or "file.bin",
+                mime_type,
+            )
+            await news_svc.add_photo(pool, news_id, filename, thumb, media_kind, mime_type, len(content))
 
     await news_svc.update_news(
         pool,

@@ -66,6 +66,9 @@ CREATE_TABLES_SQL = [
         news_id INTEGER NOT NULL REFERENCES news(id) ON DELETE CASCADE,
         filename VARCHAR(255) NOT NULL,
         thumbnail_filename VARCHAR(255) NOT NULL,
+        media_kind VARCHAR(20) NOT NULL DEFAULT 'image',
+        mime_type VARCHAR(120) NOT NULL DEFAULT 'image/jpeg',
+        size_bytes BIGINT NOT NULL DEFAULT 0,
         created_at TIMESTAMPTZ DEFAULT NOW()
     );
     """,
@@ -97,6 +100,18 @@ async def init_db():
         await conn.execute("ALTER TABLE news ALTER COLUMN is_published SET NOT NULL")
         await conn.execute("ALTER TABLE news ADD COLUMN IF NOT EXISTS public_token VARCHAR(36)")
         await conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS news_public_token_uidx ON news(public_token)")
+        await conn.execute("ALTER TABLE photos ADD COLUMN IF NOT EXISTS media_kind VARCHAR(20)")
+        await conn.execute("UPDATE photos SET media_kind='image' WHERE media_kind IS NULL OR media_kind = ''")
+        await conn.execute("ALTER TABLE photos ALTER COLUMN media_kind SET DEFAULT 'image'")
+        await conn.execute("ALTER TABLE photos ALTER COLUMN media_kind SET NOT NULL")
+        await conn.execute("ALTER TABLE photos ADD COLUMN IF NOT EXISTS mime_type VARCHAR(120)")
+        await conn.execute("UPDATE photos SET mime_type='image/jpeg' WHERE mime_type IS NULL OR mime_type = ''")
+        await conn.execute("ALTER TABLE photos ALTER COLUMN mime_type SET DEFAULT 'image/jpeg'")
+        await conn.execute("ALTER TABLE photos ALTER COLUMN mime_type SET NOT NULL")
+        await conn.execute("ALTER TABLE photos ADD COLUMN IF NOT EXISTS size_bytes BIGINT")
+        await conn.execute("UPDATE photos SET size_bytes=0 WHERE size_bytes IS NULL")
+        await conn.execute("ALTER TABLE photos ALTER COLUMN size_bytes SET DEFAULT 0")
+        await conn.execute("ALTER TABLE photos ALTER COLUMN size_bytes SET NOT NULL")
         await _seed_users(conn)
 
 

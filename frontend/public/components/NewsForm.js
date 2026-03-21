@@ -48,7 +48,7 @@ export function renderNewsForm(container, onSaved) {
   const colors = hasColors ? state.colors : DEFAULT_COLORS;
   if (!hasColors) ensureColorsLoaded();
 
-  const existingPhotos = isEdit ? (editing.photos || []) : [];
+  const existingMedia = isEdit ? (editing.media || editing.photos || []) : [];
 
   // Prepare default datetime value: editing → existing created_at, new → now (local)
   const defaultDatetime = isEdit && editing.created_at
@@ -94,13 +94,13 @@ export function renderNewsForm(container, onSaved) {
           </label>
         </div>
 
-        ${isEdit && existingPhotos.length > 0 ? `
+        ${isEdit && existingMedia.length > 0 ? `
         <div class="field">
-          <label>Текущие фото <span class="hint">(нажмите ✕ чтобы удалить)</span></label>
+          <label>Текущие файлы <span class="hint">(нажмите ✕ чтобы удалить)</span></label>
           <div class="existing-photos" id="existing-photos">
-            ${existingPhotos.map(p => `
+            ${existingMedia.map(p => `
               <div class="existing-photo-wrap" data-photo-id="${p.id}">
-                <img src="${p.thumbnail_url}" alt="фото" class="existing-thumb"/>
+                ${renderExistingMediaPreview(p)}
                 <button class="remove-existing-photo" data-photo-id="${p.id}" title="Удалить">✕</button>
               </div>
             `).join('')}
@@ -109,16 +109,16 @@ export function renderNewsForm(container, onSaved) {
         ` : ''}
 
         <div class="field">
-          <label>Фотографии <span class="hint">(до 100, можно из галереи или камеры)</span></label>
+          <label>Файлы <span class="hint">(до 100: фото, видео, аудио)</span></label>
           <div class="photo-upload-area" id="photo-drop">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
               <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
-            <span>Перетащите фото сюда или</span>
+            <span>Перетащите файлы сюда или</span>
             <label class="btn-upload">
               Выбрать файлы
-              <input type="file" id="photo-input" multiple accept="image/*" style="display:none"/>
+              <input type="file" id="photo-input" multiple accept="image/*,video/*,audio/*" style="display:none"/>
             </label>
           </div>
           <div class="photo-preview-list" id="photo-previews"></div>
@@ -160,24 +160,40 @@ export function renderNewsForm(container, onSaved) {
 
   function addFiles(files) {
     for (const file of files) {
-      if (!file.type.startsWith('image/')) continue;
+      if (!isSupportedMedia(file.type)) continue;
       newFiles.push(file);
-      const reader = new FileReader();
-      reader.onload = e => {
-        const wrap = document.createElement('div');
-        wrap.className = 'preview-wrap';
+      const wrap = document.createElement('div');
+      wrap.className = 'preview-wrap';
+
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          wrap.innerHTML = `
+            <img src="${e.target.result}" class="preview-thumb" alt="preview"/>
+            <button class="remove-preview" title="Удалить">✕</button>
+          `;
+          bindRemovePreview(wrap, file);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const kind = file.type.startsWith('video/') ? 'Видео' : 'Аудио';
         wrap.innerHTML = `
-          <img src="${e.target.result}" class="preview-thumb" alt="preview"/>
+          <div class="preview-file-badge">${kind}</div>
+          <div class="preview-file-name">${escHtml(file.name || kind)}</div>
           <button class="remove-preview" title="Удалить">✕</button>
         `;
-        wrap.querySelector('.remove-preview').addEventListener('click', () => {
-          newFiles = newFiles.filter(f => f !== file);
-          wrap.remove();
-        });
-        previewList.appendChild(wrap);
-      };
-      reader.readAsDataURL(file);
+        bindRemovePreview(wrap, file);
+      }
+
+      previewList.appendChild(wrap);
     }
+  }
+
+  function bindRemovePreview(wrap, file) {
+    wrap.querySelector('.remove-preview').addEventListener('click', () => {
+      newFiles = newFiles.filter(f => f !== file);
+      wrap.remove();
+    });
   }
 
   fileInput.addEventListener('change', () => addFiles(fileInput.files));
@@ -219,12 +235,12 @@ export function renderNewsForm(container, onSaved) {
       fd.append('color', selectedColor);
       if (datetimeVal) fd.append('created_at', datetimeVal);
       fd.append('is_published', String(isPublished));
-      newFiles.forEach(f => fd.append('new_photos', f));
+      newFiles.forEach(f => fd.append('new_media', f));
       if (isEdit) {
         fd.append('delete_photo_ids', JSON.stringify(deletedPhotoIds));
         await api.updateNews(editing.id, fd);
       } else {
-        newFiles.forEach(f => fd.append('photos', f));
+        newFiles.forEach(f => fd.append('media', f));
         await api.createNews(fd);
       }
       close();
@@ -239,7 +255,28 @@ export function renderNewsForm(container, onSaved) {
 }
 
 function escHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function isSupportedMedia(mimeType) {
+  return mimeType.startsWith('image/') || mimeType.startsWith('video/') || mimeType.startsWith('audio/');
+}
+
+function renderExistingMediaPreview(item) {
+  const kind = item.media_kind || 'image';
+  if (kind === 'image' && item.thumbnail_url) {
+    return `<img src="${item.thumbnail_url}" alt="файл" class="existing-thumb"/>`;
+  }
+  if (kind === 'video') {
+    if (item.thumbnail_url) {
+      return `<img src="${item.thumbnail_url}" alt="Видео" class="existing-thumb"/>`;
+    }
+    return '<div class="existing-file-badge">Видео</div>';
+  }
+  if (kind === 'audio') {
+    return '<div class="existing-file-badge">Аудио</div>';
+  }
+  return '<div class="existing-file-badge">Файл</div>';
 }
 
 /** Convert a Date to "YYYY-MM-DDTHH:MM" for datetime-local input (local time). */

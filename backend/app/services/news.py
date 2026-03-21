@@ -20,7 +20,10 @@ async def get_news_list(pool: Pool, page: int = 1, per_page: int = 10):
                    array_agg(json_build_object(
                        'id', p.id,
                        'filename', p.filename,
-                       'thumbnail_filename', p.thumbnail_filename
+                       'thumbnail_filename', p.thumbnail_filename,
+                       'media_kind', p.media_kind,
+                       'mime_type', p.mime_type,
+                       'size_bytes', p.size_bytes
                    ) ORDER BY p.id) FILTER (WHERE p.id IS NOT NULL) as photos
             FROM news n
             LEFT JOIN photos p ON p.news_id = n.id
@@ -42,7 +45,10 @@ async def get_news_by_id(pool: Pool, news_id: int):
                    array_agg(json_build_object(
                        'id', p.id,
                        'filename', p.filename,
-                       'thumbnail_filename', p.thumbnail_filename
+                       'thumbnail_filename', p.thumbnail_filename,
+                       'media_kind', p.media_kind,
+                       'mime_type', p.mime_type,
+                       'size_bytes', p.size_bytes
                    ) ORDER BY p.id) FILTER (WHERE p.id IS NOT NULL) as photos
             FROM news n
             LEFT JOIN photos p ON p.news_id = n.id
@@ -113,7 +119,10 @@ async def get_news_by_public_token(pool: Pool, public_token: str):
                    array_agg(json_build_object(
                        'id', p.id,
                        'filename', p.filename,
-                       'thumbnail_filename', p.thumbnail_filename
+                       'thumbnail_filename', p.thumbnail_filename,
+                       'media_kind', p.media_kind,
+                       'mime_type', p.mime_type,
+                       'size_bytes', p.size_bytes
                    ) ORDER BY p.id) FILTER (WHERE p.id IS NOT NULL) as photos
             FROM news n
             LEFT JOIN photos p ON p.news_id = n.id
@@ -142,11 +151,24 @@ async def delete_news(pool: Pool, news_id: int) -> bool:
     return result == "DELETE 1"
 
 
-async def add_photo(pool: Pool, news_id: int, filename: str, thumbnail_filename: str) -> int:
+async def add_photo(
+    pool: Pool,
+    news_id: int,
+    filename: str,
+    thumbnail_filename: str,
+    media_kind: str = "image",
+    mime_type: str = "image/jpeg",
+    size_bytes: int = 0,
+) -> int:
     async with pool.acquire() as conn:
         photo_id = await conn.fetchval(
-            "INSERT INTO photos (news_id, filename, thumbnail_filename) VALUES ($1, $2, $3) RETURNING id",
-            news_id, filename, thumbnail_filename
+            "INSERT INTO photos (news_id, filename, thumbnail_filename, media_kind, mime_type, size_bytes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+            news_id,
+            filename,
+            thumbnail_filename,
+            media_kind,
+            mime_type,
+            size_bytes,
         )
     return photo_id
 

@@ -12,6 +12,31 @@ PHOTOS_DIR = os.getenv("PHOTOS_DIR", "/app/photos")
 THUMBNAILS_DIR = os.getenv("THUMBNAILS_DIR", "/app/photos/thumbnails")
 THUMBNAIL_SIZE = (300, 300)
 
+ALLOWED_IMAGE_MIME = {
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+}
+ALLOWED_VIDEO_MIME = {
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+}
+ALLOWED_AUDIO_MIME = {
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/wav",
+    "audio/ogg",
+    "audio/mp4",
+    "audio/x-m4a",
+}
+
+MAX_IMAGE_BYTES = int(os.getenv("MAX_IMAGE_BYTES", str(15 * 1024 * 1024)))
+MAX_VIDEO_BYTES = int(os.getenv("MAX_VIDEO_BYTES", str(200 * 1024 * 1024)))
+MAX_AUDIO_BYTES = int(os.getenv("MAX_AUDIO_BYTES", str(50 * 1024 * 1024)))
+
 USER1_LOGIN = os.getenv("USER1_LOGIN", "admin")
 USER1_PASSWORD = os.getenv("USER1_PASSWORD", "admin123")
 USER2_LOGIN = os.getenv("USER2_LOGIN", "user")
