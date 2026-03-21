@@ -14,13 +14,34 @@ const DEFAULT_COLORS = [
   { id: 'lime', label: 'Лаймовый', value: '#84CC16' },
 ];
 
+let colorsLoadPromise = null;
+
+function ensureColorsLoaded() {
+  const hasColors = Array.isArray(state.colors) && state.colors.length > 0;
+  if (hasColors || colorsLoadPromise) return;
+
+  colorsLoadPromise = api.getColors()
+    .then(realColors => {
+      if (Array.isArray(realColors) && realColors.length > 0) {
+        setState({ colors: realColors });
+        return;
+      }
+      setState({ colors: DEFAULT_COLORS });
+    })
+    .catch(() => {
+      setState({ colors: DEFAULT_COLORS });
+    })
+    .finally(() => {
+      colorsLoadPromise = null;
+    });
+}
+
 export function renderNewsForm(container, onSaved) {
   const editing = state.editingNews;
   const isEdit = !!editing;
-  const colors = state.colors.length ? state.colors : DEFAULT_COLORS;
-  if (!state.colors.length) {
-    api.getColors().then(realColors => setState({ colors: realColors })).catch(() => {});
-  }
+  const hasColors = Array.isArray(state.colors) && state.colors.length > 0;
+  const colors = hasColors ? state.colors : DEFAULT_COLORS;
+  if (!hasColors) ensureColorsLoaded();
 
   const existingPhotos = isEdit ? (editing.photos || []) : [];
 
