@@ -225,6 +225,39 @@ test('auth header uses token', () => {
   assertEqual(headers.Authorization, 'Bearer bearer-token-xyz');
 });
 
+// ── Public share link tests ────────────────────────────────────────────
+
+console.log('\n🔗 Public sharing');
+
+const PUBLIC_NEWS_PATH_PREFIX = '/public/news/';
+
+function getPublicTokenFromPath(pathname) {
+  const normalized = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+  if (!normalized.startsWith(PUBLIC_NEWS_PATH_PREFIX)) return null;
+  const token = normalized.slice(PUBLIC_NEWS_PATH_PREFIX.length);
+  return token ? decodeURIComponent(token) : null;
+}
+
+function makeShareUrl(origin, token) {
+  return `${origin}/public/news/${encodeURIComponent(token)}`;
+}
+
+test('extracts token from public path', () => {
+  assertEqual(getPublicTokenFromPath('/public/news/abc-123'), 'abc-123');
+});
+
+test('extracts token from public path with trailing slash', () => {
+  assertEqual(getPublicTokenFromPath('/public/news/abc-123/'), 'abc-123');
+});
+
+test('returns null for non-public path', () => {
+  assertEqual(getPublicTokenFromPath('/news/1'), null);
+});
+
+test('builds encoded public share URL', () => {
+  assertEqual(makeShareUrl('https://example.com', 'a b/c'), 'https://example.com/public/news/a%20b%2Fc');
+});
+
 // ── Summary ────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(40)}`);

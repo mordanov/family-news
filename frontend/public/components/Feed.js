@@ -53,6 +53,15 @@ export function renderFeed(container, colorMap) {
       (n) => setState({ editingNews: n, showForm: true }),
       async (n) => {
         if (!canManage) return;
+        try {
+          await api.rotateNewsPublicLink(n.id);
+          await loadPage(state.page);
+        } catch (e) {
+          alert('Ошибка обновления ссылки: ' + e.message);
+        }
+      },
+      async (n) => {
+        if (!canManage) return;
         if (!confirm(`Удалить новость?\n\n«${n.description.slice(0, 60)}…»`)) return;
         try {
           await api.deleteNews(n.id);

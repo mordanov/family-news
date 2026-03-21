@@ -102,6 +102,9 @@ body {
 }
 .btn-icon-sm:hover        { color: var(--teal); background: var(--teal-muted); }
 .btn-icon-sm.danger:hover { color: var(--danger); background: #FEE2E2; }
+.btn-icon-sm.shared { color: var(--amber); }
+.btn-icon-sm.shared:hover { color: #D97706; background: #FEF3C7; }
+.btn-icon-sm.shared.copied { color: var(--teal); background: var(--teal-muted); }
 
 /* ── Login ──────────────────────────────────────────────────────────── */
 .login-wrap {
@@ -203,6 +206,21 @@ body {
 .field select:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+.field-checkbox { margin-top: -2px; }
+.checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.98rem;
+}
+.checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--teal);
 }
 .hint { font-weight: 400; font-size: 0.8rem; text-transform: none; letter-spacing: 0; }
 

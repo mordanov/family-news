@@ -87,6 +87,13 @@ export function renderNewsForm(container, onSaved) {
           <input type="datetime-local" id="news-datetime" value="${defaultDatetime}"/>
         </div>
 
+        <div class="field field-checkbox">
+          <label class="checkbox-row">
+            <input type="checkbox" id="news-publish" ${isEdit && editing.is_published ? 'checked' : ''}/>
+            <span>Опубликовать</span>
+          </label>
+        </div>
+
         ${isEdit && existingPhotos.length > 0 ? `
         <div class="field">
           <label>Текущие фото <span class="hint">(нажмите ✕ чтобы удалить)</span></label>
@@ -197,6 +204,7 @@ export function renderNewsForm(container, onSaved) {
   container.querySelector('#save-form').addEventListener('click', async () => {
     const desc = container.querySelector('#news-desc').value.trim();
     const datetimeVal = container.querySelector('#news-datetime').value; // "YYYY-MM-DDTHH:MM"
+    const isPublished = container.querySelector('#news-publish').checked;
     const errEl = container.querySelector('#form-error');
     if (!desc) { errEl.textContent = 'Введите описание'; errEl.classList.remove('hidden'); return; }
 
@@ -210,6 +218,7 @@ export function renderNewsForm(container, onSaved) {
       fd.append('description', desc);
       fd.append('color', selectedColor);
       if (datetimeVal) fd.append('created_at', datetimeVal);
+      fd.append('is_published', String(isPublished));
       newFiles.forEach(f => fd.append('new_photos', f));
       if (isEdit) {
         fd.append('delete_photo_ids', JSON.stringify(deletedPhotoIds));

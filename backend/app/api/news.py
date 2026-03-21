@@ -41,6 +41,12 @@ def _normalize_photo(photo: dict | str) -> Optional[dict]:
     }
 
 
+def _parse_publish_flag(value: Optional[str]) -> bool:
+    if value is None:
+        return False
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def format_news(item: dict) -> dict:
     photos = item.get("photos") or []
     normalized_photos = [p for p in (_normalize_photo(photo) for photo in photos) if p is not None]
@@ -51,6 +57,8 @@ def format_news(item: dict) -> dict:
         "created_at": item["created_at"].isoformat() if item["created_at"] else None,
         "updated_at": item["updated_at"].isoformat() if item["updated_at"] else None,
         "author": item.get("author"),
+        "is_published": bool(item.get("is_published")),
+        "public_token": item.get("public_token"),
         "photos": normalized_photos,
     }
 
@@ -77,12 +85,14 @@ async def create_news(
     description: str = Form(...),
     color: str = Form(DEFAULT_COLOR),
     created_at: Optional[str] = Form(default=None),
+    is_published: Optional[str] = Form(default=None),
     photos: list[UploadFile] = File(default=[]),
     current_user=Depends(require_full_access)
 ):
     pool = await get_pool()
     parsed_dt = _parse_datetime(created_at)
-    news_id = await news_svc.create_news(pool, description, str(current_user["sub"]), color, parsed_dt)
+    parsed_publish = _parse_publish_flag(is_published)
+    news_id = await news_svc.create_news(pool, description, str(current_user["sub"]), color, parsed_dt, parsed_publish)
     for photo in photos[:10]:
         content = await photo.read()
         if content:
@@ -107,6 +117,7 @@ async def update_news(
     description: str = Form(...),
     color: str = Form(DEFAULT_COLOR),
     created_at: Optional[str] = Form(default=None),
+    is_published: Optional[str] = Form(default=None),
     new_photos: list[UploadFile] = File(default=[]),
     delete_photo_ids: str = Form(default="[]"),
     _=Depends(require_full_access)
@@ -136,9 +147,40 @@ async def update_news(
             filename, thumb = await photo_svc.save_photo(content, photo.filename or "photo.jpg")
             await news_svc.add_photo(pool, news_id, filename, thumb)
 
-    await news_svc.update_news(pool, news_id, description, color, _parse_datetime(created_at))
+    await news_svc.update_news(
+        pool,
+        news_id,
+        description,
+        color,
+        _parse_datetime(created_at),
+        _parse_publish_flag(is_published),
+        item.get("public_token"),
+    )
     item = await news_svc.get_news_by_id(pool, news_id)
     return format_news(item)
+
+
+@router.get("/public/{public_token}")
+async def get_public_news(public_token: str):
+    pool = await get_pool()
+    item = await news_svc.get_news_by_public_token(pool, public_token)
+    if not item:
+        raise HTTPException(404, "Публичная новость не найдена")
+    return format_news(item)
+
+
+@router.post("/{news_id}/public-link/rotate")
+async def rotate_public_link(news_id: int, _=Depends(require_full_access)):
+    pool = await get_pool()
+    item = await news_svc.get_news_by_id(pool, news_id)
+    if not item:
+        raise HTTPException(404, "Новость не найдена")
+    if not item.get("is_published"):
+        raise HTTPException(409, "Новость не опубликована")
+
+    await news_svc.rotate_public_token(pool, news_id)
+    updated_item = await news_svc.get_news_by_id(pool, news_id)
+    return format_news(updated_item)
 
 
 @router.delete("/{news_id}", status_code=204)
@@ -162,5 +204,5 @@ async def delete_photo(news_id: int, photo_id: int, _=Depends(require_full_acces
 
 
 @router.get("/meta/colors")
-async def get_colors(_=Depends(get_current_user)):
+async def get_colors():
     return NEWS_COLORS

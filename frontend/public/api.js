@@ -15,12 +15,13 @@ function getToken() {
   return localStorage.getItem('token');
 }
 
-function authHeaders() {
+function authHeaders(includeAuth = true) {
+  if (!includeAuth) return {};
   return { Authorization: `Bearer ${getToken()}` };
 }
 
-async function request(method, path, body, isFormData = false) {
-  const headers = authHeaders();
+async function request(method, path, body, isFormData = false, options = {}) {
+  const headers = authHeaders(options.auth !== false);
   if (!isFormData) headers['Content-Type'] = 'application/json';
   const retryCount = RETRYABLE_METHODS.has(method) ? RETRY_DELAYS_MS.length : 0;
 
@@ -86,11 +87,15 @@ export const api = {
   },
 
   async getColors() {
-    return request('GET', '/news/meta/colors');
+    return request('GET', '/news/meta/colors', null, false, { auth: false });
   },
 
   async getNews(page = 1) {
     return request('GET', `/news?page=${page}&per_page=10`);
+  },
+
+  async getPublicNews(token) {
+    return request('GET', `/news/public/${encodeURIComponent(token)}`, null, false, { auth: false });
   },
 
   async createNews(formData) {
@@ -99,6 +104,10 @@ export const api = {
 
   async updateNews(id, formData) {
     return request('PUT', `/news/${id}`, formData, true);
+  },
+
+  async rotateNewsPublicLink(id) {
+    return request('POST', `/news/${id}/public-link/rotate`);
   },
 
   async deleteNews(id) {

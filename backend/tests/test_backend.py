@@ -114,6 +114,8 @@ def test_format_news_item_no_photos():
         "created_at": now,
         "updated_at": now,
         "author": "admin",
+        "is_published": False,
+        "public_token": None,
         "photos": None,
     }
     from app.api.news import format_news
@@ -121,6 +123,8 @@ def test_format_news_item_no_photos():
     assert result["id"] == 1
     assert result["photos"] == []
     assert result["author"] == "admin"
+    assert result["is_published"] is False
+    assert result["public_token"] is None
     assert "created_at" in result
 
 
@@ -134,12 +138,16 @@ def test_format_news_item_with_photos():
         "color": "teal",
         "created_at": now,
         "updated_at": now,
+        "is_published": True,
+        "public_token": "abc-token",
         "photos": [
             {"id": 10, "filename": "abc.jpg", "thumbnail_filename": "thumb_abc.jpg"},
         ],
     }
     result = format_news(item)
     assert len(result["photos"]) == 1
+    assert result["is_published"] is True
+    assert result["public_token"] == "abc-token"
     assert result["photos"][0]["url"] == "/api/photos/abc.jpg"
     assert result["photos"][0]["thumbnail_url"] == "/api/photos/thumbnails/thumb_abc.jpg"
 
@@ -162,6 +170,30 @@ def test_format_news_item_with_stringified_photos():
     assert len(result["photos"]) == 1
     assert result["photos"][0]["id"] == 42
     assert result["photos"][0]["url"] == "/api/photos/x.jpg"
+
+
+def test_parse_publish_flag_truthy_values():
+    from app.api.news import _parse_publish_flag
+
+    assert _parse_publish_flag("true") is True
+    assert _parse_publish_flag("1") is True
+    assert _parse_publish_flag("on") is True
+
+
+def test_parse_publish_flag_falsey_values():
+    from app.api.news import _parse_publish_flag
+
+    assert _parse_publish_flag(None) is False
+    assert _parse_publish_flag("false") is False
+    assert _parse_publish_flag("0") is False
+
+
+def test_generate_public_token_is_uuid():
+    from uuid import UUID
+    from app.services.news import _generate_public_token
+
+    token = _generate_public_token()
+    assert str(UUID(token)) == token
 
 
 # ── Config tests ─────────────────────────────────────────────────────────────

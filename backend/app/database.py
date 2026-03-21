@@ -54,6 +54,8 @@ CREATE_TABLES_SQL = [
         description TEXT NOT NULL,
         color VARCHAR(50) NOT NULL DEFAULT 'amber',
         author VARCHAR(100) NOT NULL DEFAULT 'admin',
+        is_published BOOLEAN NOT NULL DEFAULT FALSE,
+        public_token VARCHAR(36) UNIQUE,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
     );
@@ -89,6 +91,12 @@ async def init_db():
         await conn.execute("ALTER TABLE news ALTER COLUMN author SET NOT NULL")
         await conn.execute("ALTER TABLE news DROP CONSTRAINT IF EXISTS news_author_id_fkey")
         await conn.execute("ALTER TABLE news DROP COLUMN IF EXISTS author_id")
+        await conn.execute("ALTER TABLE news ADD COLUMN IF NOT EXISTS is_published BOOLEAN")
+        await conn.execute("UPDATE news SET is_published=FALSE WHERE is_published IS NULL")
+        await conn.execute("ALTER TABLE news ALTER COLUMN is_published SET DEFAULT FALSE")
+        await conn.execute("ALTER TABLE news ALTER COLUMN is_published SET NOT NULL")
+        await conn.execute("ALTER TABLE news ADD COLUMN IF NOT EXISTS public_token VARCHAR(36)")
+        await conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS news_public_token_uidx ON news(public_token)")
         await _seed_users(conn)
 
 

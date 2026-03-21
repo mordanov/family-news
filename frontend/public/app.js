@@ -9,6 +9,7 @@ import { renderUsersManager } from '/components/UsersManager.js';
 const appEl = document.getElementById('app');
 const formEl = document.getElementById('form-mount');
 const lbEl = document.getElementById('lightbox-mount');
+const PUBLIC_NEWS_PATH_PREFIX = '/public/news/';
 
 let colorMap = {};
 let bootstrapPromise = null;
@@ -43,6 +44,13 @@ async function loadUsersForManager() {
 }
 
 async function init() {
+  const publicToken = getPublicTokenFromPath(window.location.pathname);
+  if (publicToken) {
+    await bootstrapPublicState(publicToken);
+    render(state);
+    return;
+  }
+
   if (state.token) {
     await bootstrapAuthenticatedState();
   }
@@ -50,6 +58,17 @@ async function init() {
 }
 
 function render(s) {
+  if (s.publicToken) {
+    renderPublicPage(s);
+    formEl.innerHTML = '';
+    if (s.lightboxUrl) {
+      renderLightbox(lbEl, s);
+    } else {
+      lbEl.innerHTML = '';
+    }
+    return;
+  }
+
   // Main area
   if (!s.token) {
     appEl.innerHTML = '';
@@ -93,6 +112,80 @@ function render(s) {
   } else {
     lbEl.innerHTML = '';
   }
+}
+
+async function bootstrapPublicState(publicToken) {
+  setState({ publicToken, publicNewsItem: null, loading: true, loadError: null });
+  try {
+    const [item, colors] = await Promise.all([
+      api.getPublicNews(publicToken),
+      api.getColors(),
+    ]);
+    colorMap = Object.fromEntries((colors || []).map(c => [c.id, c.value]));
+    setState({
+      colors: Array.isArray(colors) ? colors : [],
+      publicNewsItem: item,
+      news: [item],
+      page: 1,
+      pages: 1,
+      total: 1,
+      loading: false,
+      loadError: null,
+    });
+  } catch (e) {
+    setState({ publicNewsItem: null, news: [], loading: false, loadError: e.message || 'Не удалось загрузить новость.' });
+  }
+}
+
+function renderPublicPage(s) {
+  if (!document.getElementById('public-news-container')) {
+    appEl.innerHTML = `
+      <header class="app-header">
+        <div class="header-inner">
+          <div class="header-logo">
+            <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="10" fill="#006D5B"/>
+              <path d="M10 28L20 12L30 28H10Z" fill="white" opacity="0.9"/>
+              <circle cx="20" cy="14" r="3" fill="white"/>
+            </svg>
+            <span>Публичная новость</span>
+          </div>
+          <div class="header-right">
+            <a href="/" class="btn-secondary">Открыть ленту</a>
+          </div>
+        </div>
+      </header>
+      <main class="app-main">
+        <div id="public-news-container" class="feed-container"></div>
+      </main>
+    `;
+  }
+
+  const container = document.getElementById('public-news-container');
+  if (!container) return;
+
+  if (s.loading) {
+    container.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+    return;
+  }
+
+  if (s.loadError || !s.publicNewsItem) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>${s.loadError || 'Публичная новость не найдена.'}</p>
+      </div>
+    `;
+    return;
+  }
+
+  renderFeed(container, colorMap);
+}
+
+function getPublicTokenFromPath(pathname) {
+  const normalized = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+  if (!normalized.startsWith(PUBLIC_NEWS_PATH_PREFIX)) return null;
+  const token = normalized.slice(PUBLIC_NEWS_PATH_PREFIX.length);
+  return token ? decodeURIComponent(token) : null;
 }
 
 function renderApp(s) {

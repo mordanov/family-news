@@ -1,7 +1,12 @@
 from asyncpg import Pool
 from datetime import datetime
 from typing import Optional
+from uuid import uuid4
 from app.config import DEFAULT_COLOR
+
+
+def _generate_public_token() -> str:
+    return str(uuid4())
 
 
 async def get_news_list(pool: Pool, page: int = 1, per_page: int = 10):
@@ -11,7 +16,7 @@ async def get_news_list(pool: Pool, page: int = 1, per_page: int = 10):
         rows = await conn.fetch(
             """
             SELECT n.id, n.description, n.color, n.created_at, n.updated_at,
-                   n.author,
+                   n.author, n.is_published, n.public_token,
                    array_agg(json_build_object(
                        'id', p.id,
                        'filename', p.filename,
@@ -33,7 +38,7 @@ async def get_news_by_id(pool: Pool, news_id: int):
         row = await conn.fetchrow(
             """
             SELECT n.id, n.description, n.color, n.created_at, n.updated_at,
-                   n.author,
+                   n.author, n.is_published, n.public_token,
                    array_agg(json_build_object(
                        'id', p.id,
                        'filename', p.filename,
@@ -55,34 +60,80 @@ async def create_news(
     author: str,
     color: str = DEFAULT_COLOR,
     created_at: Optional[datetime] = None,
+    is_published: bool = False,
 ) -> int:
+    public_token = _generate_public_token() if is_published else None
     async with pool.acquire() as conn:
         if created_at is not None:
             news_id = await conn.fetchval(
-                "INSERT INTO news (description, color, author, created_at, updated_at) VALUES ($1, $2, $3, $4, $4) RETURNING id",
-                description, color, author, created_at
+                "INSERT INTO news (description, color, author, created_at, updated_at, is_published, public_token) VALUES ($1, $2, $3, $4, $4, $5, $6) RETURNING id",
+                description, color, author, created_at, is_published, public_token
             )
         else:
             news_id = await conn.fetchval(
-                "INSERT INTO news (description, color, author) VALUES ($1, $2, $3) RETURNING id",
-                description, color, author
+                "INSERT INTO news (description, color, author, is_published, public_token) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+                description, color, author, is_published, public_token
             )
     return news_id
 
 
-async def update_news(pool: Pool, news_id: int, description: str, color: str, created_at: Optional[datetime] = None) -> bool:
+async def update_news(
+    pool: Pool,
+    news_id: int,
+    description: str,
+    color: str,
+    created_at: Optional[datetime] = None,
+    is_published: bool = False,
+    current_public_token: Optional[str] = None,
+) -> bool:
+    public_token = current_public_token if is_published else None
+    if is_published and not public_token:
+        public_token = _generate_public_token()
+
     async with pool.acquire() as conn:
         if created_at is not None:
             result = await conn.execute(
-                "UPDATE news SET description=$1, color=$2, created_at=$3, updated_at=NOW() WHERE id=$4",
-                description, color, created_at, news_id
+                "UPDATE news SET description=$1, color=$2, created_at=$3, is_published=$4, public_token=$5, updated_at=NOW() WHERE id=$6",
+                description, color, created_at, is_published, public_token, news_id
             )
         else:
             result = await conn.execute(
-                "UPDATE news SET description=$1, color=$2, updated_at=NOW() WHERE id=$3",
-                description, color, news_id
+                "UPDATE news SET description=$1, color=$2, is_published=$3, public_token=$4, updated_at=NOW() WHERE id=$5",
+                description, color, is_published, public_token, news_id
             )
     return result == "UPDATE 1"
+
+
+async def get_news_by_public_token(pool: Pool, public_token: str):
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT n.id, n.description, n.color, n.created_at, n.updated_at,
+                   n.author, n.is_published, n.public_token,
+                   array_agg(json_build_object(
+                       'id', p.id,
+                       'filename', p.filename,
+                       'thumbnail_filename', p.thumbnail_filename
+                   ) ORDER BY p.id) FILTER (WHERE p.id IS NOT NULL) as photos
+            FROM news n
+            LEFT JOIN photos p ON p.news_id = n.id
+            WHERE n.public_token = $1 AND n.is_published = TRUE
+            GROUP BY n.id
+            """,
+            public_token,
+        )
+    return dict(row) if row else None
+
+
+async def rotate_public_token(pool: Pool, news_id: int) -> str:
+    new_token = _generate_public_token()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE news SET public_token=$1, updated_at=NOW() WHERE id=$2",
+            new_token,
+            news_id,
+        )
+    return new_token
 
 
 async def delete_news(pool: Pool, news_id: int) -> bool:

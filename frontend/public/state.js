@@ -11,6 +11,8 @@ export const state = {
   lightboxUrl: null,
   lightboxPhotos: [],
   lightboxIndex: 0,
+  publicToken: null,
+  publicNewsItem: null,
   editingNews: null,   // news object being edited
   showForm: false,
   showUsersManager: false,

@@ -114,11 +114,13 @@ newsfeed/
 | POST | `/api/news` | Создать новость (multipart/form-data) |
 | GET | `/api/news/{id}` | Получить одну новость |
 | PUT | `/api/news/{id}` | Обновить новость |
+| GET | `/api/news/public/{token}` | Публичный просмотр новости без авторизации |
+| POST | `/api/news/{id}/public-link/rotate` | Обновить публичную ссылку (новый `public_token`) |
 | DELETE | `/api/news/{id}` | Удалить новость + фото |
 | DELETE | `/api/news/{id}/photos/{pid}` | Удалить одно фото |
 | GET | `/api/news/meta/colors` | Список доступных цветов |
 
-Все эндпоинты (кроме `/login`) требуют заголовок:
+Все эндпоинты (кроме `/login`, `/api/news/public/{token}`, `/api/news/meta/colors`) требуют заголовок:
 ```
 Authorization: Bearer <token>
 ```
@@ -169,11 +171,16 @@ curl -X PATCH http://localhost:8080/api/users/3/role \
   "description": "...",
   "color": "amber",
   "author": "admin",
+  "is_published": true,
+  "public_token": "9d8d17ef-07ee-45f9-befd-69adf9afde6f",
   "created_at": "2026-03-21T12:30:00+00:00",
   "updated_at": "2026-03-21T12:30:00+00:00",
   "photos": []
 }
 ```
+
+Для создания/обновления новости в `multipart/form-data` можно передавать поле `is_published` (`true`/`false`).
+Если новость опубликована, клиент может собрать публичную ссылку вида `/public/news/{public_token}`.
 
 ---
 
