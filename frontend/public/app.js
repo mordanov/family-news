@@ -10,20 +10,34 @@ const formEl = document.getElementById('form-mount');
 const lbEl = document.getElementById('lightbox-mount');
 
 let colorMap = {};
+let bootstrapPromise = null;
 
-async function init() {
-  if (state.token) {
+async function bootstrapAuthenticatedState() {
+  if (!state.token) return;
+  if (bootstrapPromise) return bootstrapPromise;
+
+  bootstrapPromise = (async () => {
     try {
       const me = await api.me();
-      setState({ user: me });
       const colors = await api.getColors();
-      setState({ colors });
       colorMap = Object.fromEntries(colors.map(c => [c.id, c.value]));
+      setState({ user: me, colors });
       await loadPage(1);
     } catch {
       localStorage.removeItem('token');
-      setState({ token: null });
+      colorMap = {};
+      setState({ token: null, user: null, news: [] });
+    } finally {
+      bootstrapPromise = null;
     }
+  })();
+
+  return bootstrapPromise;
+}
+
+async function init() {
+  if (state.token) {
+    await bootstrapAuthenticatedState();
   }
   render(state);
 }
@@ -36,6 +50,10 @@ function render(s) {
     formEl.innerHTML = '';
     lbEl.innerHTML = '';
     return;
+  }
+
+  if (!s.user && !bootstrapPromise) {
+    void bootstrapAuthenticatedState();
   }
 
   renderApp(s);
