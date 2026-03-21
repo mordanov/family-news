@@ -19,7 +19,11 @@ async def lifespan(app: FastAPI):
     await close_pool()
 
 
-app = FastAPI(title="Family Newsfeed", lifespan=lifespan)
+app = FastAPI(
+    title="Family Newsfeed", 
+    lifespan=lifespan,
+    max_upload_size=100 * 1024 * 1024  # 100MB limit for file uploads
+)
 
 # Add CORS middleware (upload limits are set in Uvicorn)
 app.add_middleware(

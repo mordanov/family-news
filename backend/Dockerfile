@@ -12,4 +12,4 @@ COPY . .
 
 RUN mkdir -p /app/photos/thumbnails
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--limit-max-requests", "10000", "--limit-concurrency", "100", "--limit-request-line", "10000", "--limit-request-fields", "100", "--limit-request-field-size", "10000000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
