@@ -293,6 +293,13 @@ body {
   word-break: break-word;
 }
 
+.card-author {
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* ── Photos in card ─────────────────────────────────────────────────── */
 .card-photos {
   display: flex;

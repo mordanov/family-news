@@ -11,6 +11,7 @@ async def get_news_list(pool: Pool, page: int = 1, per_page: int = 10):
         rows = await conn.fetch(
             """
             SELECT n.id, n.description, n.color, n.created_at, n.updated_at,
+                   n.author,
                    array_agg(json_build_object(
                        'id', p.id,
                        'filename', p.filename,
@@ -32,6 +33,7 @@ async def get_news_by_id(pool: Pool, news_id: int):
         row = await conn.fetchrow(
             """
             SELECT n.id, n.description, n.color, n.created_at, n.updated_at,
+                   n.author,
                    array_agg(json_build_object(
                        'id', p.id,
                        'filename', p.filename,
@@ -47,17 +49,23 @@ async def get_news_by_id(pool: Pool, news_id: int):
     return dict(row) if row else None
 
 
-async def create_news(pool: Pool, description: str, color: str = DEFAULT_COLOR, created_at: Optional[datetime] = None) -> int:
+async def create_news(
+    pool: Pool,
+    description: str,
+    author: str,
+    color: str = DEFAULT_COLOR,
+    created_at: Optional[datetime] = None,
+) -> int:
     async with pool.acquire() as conn:
         if created_at is not None:
             news_id = await conn.fetchval(
-                "INSERT INTO news (description, color, created_at, updated_at) VALUES ($1, $2, $3, $3) RETURNING id",
-                description, color, created_at
+                "INSERT INTO news (description, color, author, created_at, updated_at) VALUES ($1, $2, $3, $4, $4) RETURNING id",
+                description, color, author, created_at
             )
         else:
             news_id = await conn.fetchval(
-                "INSERT INTO news (description, color) VALUES ($1, $2) RETURNING id",
-                description, color
+                "INSERT INTO news (description, color, author) VALUES ($1, $2, $3) RETURNING id",
+                description, color, author
             )
     return news_id
 

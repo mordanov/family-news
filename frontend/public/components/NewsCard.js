@@ -32,6 +32,8 @@ export function renderNewsCard(news, colorMap, onEdit, onDelete) {
           `).join('')}
         </div>
       ` : ''}
+
+      ${news.author ? `<div class="card-author">Автор: ${escHtml(news.author)}</div>` : ''}
     </div>
   `;
 

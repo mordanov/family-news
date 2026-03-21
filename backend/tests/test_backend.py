@@ -86,12 +86,14 @@ def test_format_news_item_no_photos():
         "color": "amber",
         "created_at": now,
         "updated_at": now,
+        "author": "admin",
         "photos": None,
     }
     from app.api.news import format_news
     result = format_news(item)
     assert result["id"] == 1
     assert result["photos"] == []
+    assert result["author"] == "admin"
     assert "created_at" in result
 
 

@@ -51,6 +51,7 @@ CREATE_TABLES_SQL = [
         id SERIAL PRIMARY KEY,
         description TEXT NOT NULL,
         color VARCHAR(50) NOT NULL DEFAULT 'amber',
+        author VARCHAR(100) NOT NULL DEFAULT 'admin',
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
     );
@@ -73,6 +74,12 @@ async def init_db():
         # asyncpg.execute expects a single statement; run DDL sequentially.
         for statement in CREATE_TABLES_SQL:
             await conn.execute(statement)
+        await conn.execute("ALTER TABLE news ADD COLUMN IF NOT EXISTS author VARCHAR(100)")
+        await conn.execute("UPDATE news SET author='admin' WHERE author IS NULL OR author = ''")
+        await conn.execute("ALTER TABLE news ALTER COLUMN author SET DEFAULT 'admin'")
+        await conn.execute("ALTER TABLE news ALTER COLUMN author SET NOT NULL")
+        await conn.execute("ALTER TABLE news DROP CONSTRAINT IF EXISTS news_author_id_fkey")
+        await conn.execute("ALTER TABLE news DROP COLUMN IF EXISTS author_id")
         await _seed_users(conn)
 
 

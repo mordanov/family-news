@@ -123,6 +123,20 @@ newsfeed/
 Authorization: Bearer <token>
 ```
 
+Каждая новость в ответе API содержит поле `author` (строка с логином автора на момент создания новости):
+
+```json
+{
+  "id": 42,
+  "description": "...",
+  "color": "amber",
+  "author": "admin",
+  "created_at": "2026-03-21T12:30:00+00:00",
+  "updated_at": "2026-03-21T12:30:00+00:00",
+  "photos": []
+}
+```
+
 ---
 
 ## Управление
@@ -163,6 +177,7 @@ cd backend && pip install -r requirements.txt && pytest -v
 - **Фотографии** хранятся в Docker volume `photos_data` → `/app/photos/`
 - **Thumbnails** (300×300 JPEG) → `/app/photos/thumbnails/`
 - **PostgreSQL** данные → volume `postgres_data`
+- Для существующих новостей при обновлении схемы поле автора заполняется значением `admin`
 
 При удалении новости — удаляются все её фото и thumbnails с диска.  
 При удалении фото в редакторе — файл тоже удаляется с диска.

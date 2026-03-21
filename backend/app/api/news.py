@@ -50,6 +50,7 @@ def format_news(item: dict) -> dict:
         "color": item["color"],
         "created_at": item["created_at"].isoformat() if item["created_at"] else None,
         "updated_at": item["updated_at"].isoformat() if item["updated_at"] else None,
+        "author": item.get("author"),
         "photos": normalized_photos,
     }
 
@@ -77,11 +78,11 @@ async def create_news(
     color: str = Form(DEFAULT_COLOR),
     created_at: Optional[str] = Form(default=None),
     photos: list[UploadFile] = File(default=[]),
-    _=Depends(get_current_user)
+    current_user=Depends(get_current_user)
 ):
     pool = await get_pool()
     parsed_dt = _parse_datetime(created_at)
-    news_id = await news_svc.create_news(pool, description, color, parsed_dt)
+    news_id = await news_svc.create_news(pool, description, str(current_user["sub"]), color, parsed_dt)
     for photo in photos[:10]:
         content = await photo.read()
         if content:
