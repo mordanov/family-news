@@ -64,6 +64,14 @@ function render(s) {
     void bootstrapAuthenticatedState();
   }
 
+  // Guard: if role changed, close modals that require full_access
+  if (s.user && s.showForm && s.user.role !== 'full_access') {
+    setState({ showForm: false, editingNews: null });
+  }
+  if (s.user && s.showUsersManager && s.user.role !== 'full_access') {
+    setState({ showUsersManager: false });
+  }
+
   renderApp(s);
 
   // Modal form / users manager
@@ -106,7 +114,7 @@ function renderApp(s) {
             <span class="header-user">${s.user?.login || ''}</span>
             <span class="header-role" style="font-size:12px; color:#666;">${s.user?.role === 'full_access' ? '🔑 Полный доступ' : '👁️ Только чтение'}</span>
             ${canManage ? '<button id="btn-users" class="btn-secondary" title="Пользователи">Пользователи</button>' : ''}
-            ${canManage ? '<button id="btn-add" class="btn-primary btn-add">+ Добавить</button>' : ''}
+            ${canManage ? '<button id="btn-add" class="btn-primary btn-add">Добавить</button>' : ''}
             <button id="btn-logout" class="btn-ghost" title="Выйти">Выйти</button>
           </div>
         </div>
@@ -130,7 +138,7 @@ function renderApp(s) {
     }
     document.getElementById('btn-logout').addEventListener('click', () => {
       localStorage.removeItem('token');
-      setState({ token: null, user: null, news: [], users: [], showForm: false, showUsersManager: false });
+      setState({ token: null, user: null, news: [], users: [], colors: [], showForm: false, showUsersManager: false, lightboxUrl: null });
     });
   }
 

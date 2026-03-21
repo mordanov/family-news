@@ -183,6 +183,27 @@ body {
   border-color: var(--teal);
   box-shadow: 0 0 0 3px rgba(0,109,91,0.1);
 }
+.field select {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--surface);
+  transition: border-color 0.18s, box-shadow 0.18s;
+  outline: none;
+  cursor: pointer;
+}
+.field select:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(0,109,91,0.1);
+}
+.field select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .hint { font-weight: 400; font-size: 0.8rem; text-transform: none; letter-spacing: 0; }
 
 /* ── Header ─────────────────────────────────────────────────────────── */
