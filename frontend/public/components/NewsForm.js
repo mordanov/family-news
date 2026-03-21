@@ -109,7 +109,7 @@ export function renderNewsForm(container, onSaved) {
         ` : ''}
 
         <div class="field">
-          <label>Фотографии <span class="hint">(до 10, можно из галереи или камеры)</span></label>
+          <label>Фотографии <span class="hint">(до 100, можно из галереи или камеры)</span></label>
           <div class="photo-upload-area" id="photo-drop">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>

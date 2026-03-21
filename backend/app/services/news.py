@@ -25,7 +25,7 @@ async def get_news_list(pool: Pool, page: int = 1, per_page: int = 10):
             FROM news n
             LEFT JOIN photos p ON p.news_id = n.id
             GROUP BY n.id
-            ORDER BY n.created_at DESC
+            ORDER BY n.created_at DESC, n.id DESC
             LIMIT $1 OFFSET $2
             """,
             per_page, offset

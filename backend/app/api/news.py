@@ -11,6 +11,7 @@ from app.services import news as news_svc, photos as photo_svc
 from app.config import NEWS_COLORS, DEFAULT_COLOR
 
 router = APIRouter(prefix="/api/news", tags=["news"])
+MAX_NEWS_PHOTOS = 100
 
 
 def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
@@ -93,7 +94,7 @@ async def create_news(
     parsed_dt = _parse_datetime(created_at)
     parsed_publish = _parse_publish_flag(is_published)
     news_id = await news_svc.create_news(pool, description, str(current_user["sub"]), color, parsed_dt, parsed_publish)
-    for photo in photos[:10]:
+    for photo in photos[:MAX_NEWS_PHOTOS]:
         content = await photo.read()
         if content:
             filename, thumb = await photo_svc.save_photo(content, photo.filename or "photo.jpg")
@@ -140,7 +141,7 @@ async def update_news(
 
     # Add new photos
     current_count = len((item.get("photos") or []))
-    remaining_slots = max(0, 10 - current_count + len(to_delete))
+    remaining_slots = max(0, MAX_NEWS_PHOTOS - current_count + len(to_delete))
     for photo in new_photos[:remaining_slots]:
         content = await photo.read()
         if content:
