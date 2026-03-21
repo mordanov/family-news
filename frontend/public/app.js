@@ -2,6 +2,7 @@ import { api } from '/api.js';
 import { state, setState, subscribe } from '/state.js';
 import { renderLogin } from '/components/Login.js';
 import { renderFeed, loadPage } from '/components/Feed.js';
+import { renderNewsCard } from '/components/NewsCard.js';
 import { renderNewsForm } from '/components/NewsForm.js';
 import { renderLightbox } from '/components/Lightbox.js';
 import { renderUsersManager } from '/components/UsersManager.js';
@@ -178,7 +179,19 @@ function renderPublicPage(s) {
     return;
   }
 
-  renderFeed(container, colorMap);
+  const feed = document.createElement('div');
+  feed.className = 'feed';
+  const card = renderNewsCard(
+    s.publicNewsItem,
+    colorMap,
+    () => {},
+    () => {},
+    () => {},
+    false
+  );
+  feed.appendChild(card);
+  container.innerHTML = '';
+  container.appendChild(feed);
 }
 
 function getPublicTokenFromPath(pathname) {
