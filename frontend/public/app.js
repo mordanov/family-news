@@ -112,7 +112,11 @@ function renderApp(s) {
           </div>
           <div class="header-right">
             <span class="header-user">${s.user?.login || ''}</span>
-            <span class="header-role" style="font-size:12px; color:#666;">${s.user?.role === 'full_access' ? '🔑 Полный доступ' : '👁️ Только чтение'}</span>
+            <span class="header-role" title="${s.user?.role === 'full_access' ? 'Полный доступ' : 'Только чтение'}">
+              ${s.user?.role === 'full_access' 
+                ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0110 0v4"></path></svg>'
+                : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>'}
+            </span>
             ${canManage ? '<button id="btn-users" class="btn-secondary" title="Пользователи">Пользователи</button>' : ''}
             ${canManage ? '<button id="btn-add" class="btn-primary btn-add">Добавить</button>' : ''}
             <button id="btn-logout" class="btn-ghost" title="Выйти">Выйти</button>

@@ -238,10 +238,33 @@ body {
   align-items: center;
   gap: 10px;
 }
+.header-right .btn-secondary,
+.header-right .btn-primary {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  font-size: 0.9rem;
+}
 .header-user {
   font-size: 0.88rem;
   color: var(--text-muted);
   font-weight: 600;
+}
+.header-role {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--text-muted);
+  cursor: help;
+}
+.header-role svg {
+  width: 20px;
+  height: 20px;
+  color: var(--text-muted);
 }
 .btn-add { padding: 8px 18px; font-size: 0.9rem; }
 

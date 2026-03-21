@@ -44,7 +44,7 @@ export function renderUsersManager(container, onUsersChanged) {
                       <option value="read_only" ${u.role === 'read_only' ? 'selected' : ''}>Только чтение</option>
                       <option value="full_access" ${u.role === 'full_access' ? 'selected' : ''}>Полный доступ</option>
                     </select>
-                    ${u.id !== state.user?.user_id ? `<button class="btn-secondary" style="padding:4px 8px; font-size:12px;" data-role-save="${u.id}">Сохранить</button>` : ''}
+                      ${u.id !== state.user?.user_id ? `<button class="btn-secondary" style="padding:10px 14px; font-size:0.88rem; white-space:nowrap;" data-role-save="${u.id}">Сохранить</button>` : ''}
                   </div>
                 </div>
                 <button class="btn-secondary" data-delete-user="${u.id}" ${u.id === state.user?.user_id ? 'disabled' : ''} style="white-space:nowrap;">Удалить</button>
