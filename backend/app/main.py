@@ -21,6 +21,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Family Newsfeed", lifespan=lifespan)
 
+# Increase max upload size to 100MB (default is 16MB)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    max_concurrency=100
+)
+
 
 @app.middleware("http")
 async def disable_cache_for_dynamic_api(request: Request, call_next):
@@ -31,13 +41,6 @@ async def disable_cache_for_dynamic_api(request: Request, call_next):
         response.headers["Expires"] = "0"
     return response
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 app.mount("/api/photos/thumbnails", StaticFiles(directory=THUMBNAILS_DIR, check_dir=False), name="thumbnails")
 app.mount("/api/photos", StaticFiles(directory=PHOTOS_DIR, check_dir=False), name="photos")
