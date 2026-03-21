@@ -3,8 +3,9 @@ import io
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
+from PIL import Image
 from app.services.auth import hash_password, verify_password, create_access_token, decode_token
-from app.services.photos import generate_filename, delete_photo_files
+from app.services.photos import generate_filename, delete_photo_files, save_photo
 
 
 # ── Auth tests ──────────────────────────────────────────────────────────────
@@ -75,6 +76,28 @@ def test_delete_photo_files_existing(tmp_path):
 
     assert not f.exists()
     assert not t.exists()
+
+
+@pytest.mark.asyncio
+async def test_save_photo_thumbnail_applies_exif_orientation(tmp_path):
+    src = Image.new("RGB", (120, 60), color="red")
+    exif = src.getexif()
+    exif[274] = 6  # 90° rotation via EXIF Orientation
+
+    buf = io.BytesIO()
+    src.save(buf, format="JPEG", exif=exif)
+    payload = buf.getvalue()
+
+    with patch("app.services.photos.PHOTOS_DIR", str(tmp_path)), \
+         patch("app.services.photos.THUMBNAILS_DIR", str(tmp_path / "thumbs")):
+        _, thumb_name = await save_photo(payload, "photo.jpg")
+
+    thumb_path = tmp_path / "thumbs" / thumb_name
+    assert thumb_path.exists()
+
+    with Image.open(thumb_path) as thumb:
+        # Without EXIF transpose this would remain landscape (120, 60).
+        assert thumb.height > thumb.width
 
 
 # ── News service tests ───────────────────────────────────────────────────────

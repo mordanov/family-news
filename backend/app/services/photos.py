@@ -1,7 +1,7 @@
 import os
 import uuid
 import aiofiles
-from PIL import Image
+from PIL import Image, ImageOps
 import io
 from app.config import PHOTOS_DIR, THUMBNAILS_DIR, THUMBNAIL_SIZE
 
@@ -27,6 +27,8 @@ async def save_photo(file_bytes: bytes, original_filename: str) -> tuple[str, st
 
     # Generate thumbnail synchronously (Pillow is sync)
     img = Image.open(io.BytesIO(file_bytes))
+    # Apply EXIF orientation so generated thumbnails match how originals are displayed.
+    img = ImageOps.exif_transpose(img)
     img = img.convert("RGB")
     img.thumbnail(THUMBNAIL_SIZE, Image.LANCZOS)
     thumb_path = os.path.join(THUMBNAILS_DIR, thumb_filename)
