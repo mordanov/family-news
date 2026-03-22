@@ -10,6 +10,7 @@ from app.api.users import router as users_router
 from app.config import PHOTOS_DIR, THUMBNAILS_DIR
 from app.services.photos import ensure_dirs
 
+from content_size_limit_asgi import ContentSizeLimitMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,6 +33,11 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    max_size=100*1048576, #100Mb
+)
+app.add_middleware(
+    ContentSizeLimitMiddleware,
+    max_content_size=100 * 1024 * 1024,  # 100MB limit for request body
 )
 
 
