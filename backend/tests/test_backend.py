@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 from PIL import Image
+from starlette.datastructures import UploadFile
 from app.services.auth import hash_password, verify_password, create_access_token, decode_token
 from app.services.photos import generate_filename, delete_photo_files, save_photo, save_media
 from fastapi import HTTPException
@@ -216,6 +217,38 @@ def test_parse_publish_flag_falsey_values():
     assert _parse_publish_flag(None) is False
     assert _parse_publish_flag("false") is False
     assert _parse_publish_flag("0") is False
+
+
+@pytest.mark.asyncio
+async def test_save_single_media_returns_none_for_empty_file():
+    from app.api.news import _save_single_media
+
+    upload = UploadFile(filename="empty.jpg", file=io.BytesIO(b""))
+    with patch("app.api.news.photo_svc.save_media", new=AsyncMock()) as save_media_mock, \
+         patch("app.api.news.news_svc.add_photo", new=AsyncMock()) as add_photo_mock:
+        result = await _save_single_media(object(), 123, upload)
+
+    assert result is None
+    save_media_mock.assert_not_called()
+    add_photo_mock.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_save_single_media_persists_file_metadata():
+    from app.api.news import _save_single_media
+
+    upload = UploadFile(filename="photo.jpg", file=io.BytesIO(b"abc"))
+    with patch("app.api.news._validate_upload", return_value="image/jpeg"), \
+         patch("app.api.news.photo_svc.save_media", new=AsyncMock(return_value=("f.jpg", "thumb_f.jpg", "image"))), \
+         patch("app.api.news.news_svc.add_photo", new=AsyncMock(return_value=77)):
+        result = await _save_single_media(object(), 55, upload)
+
+    assert result["id"] == 77
+    assert result["filename"] == "f.jpg"
+    assert result["thumbnail_filename"] == "thumb_f.jpg"
+    assert result["media_kind"] == "image"
+    assert result["mime_type"] == "image/jpeg"
+    assert result["size_bytes"] == 3
 
 
 def test_generate_public_token_is_uuid():

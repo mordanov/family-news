@@ -10,8 +10,6 @@ from app.api.users import router as users_router
 from app.config import PHOTOS_DIR, THUMBNAILS_DIR
 from app.services.photos import ensure_dirs
 
-from content_size_limit_asgi import ContentSizeLimitMiddleware
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
@@ -20,11 +18,7 @@ async def lifespan(app: FastAPI):
     await close_pool()
 
 
-app = FastAPI(
-    title="Family Newsfeed", 
-    lifespan=lifespan,
-    max_upload_size=100 * 1024 * 1024  # 100MB limit for file uploads
-)
+app = FastAPI(title="Family Newsfeed", lifespan=lifespan)
 
 # Add CORS middleware (upload limits are set in Uvicorn)
 app.add_middleware(
@@ -33,10 +27,6 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
-app.add_middleware(
-    ContentSizeLimitMiddleware,
-    max_content_size=100 * 1024 * 1024,  # 100MB limit for request body
 )
 
 

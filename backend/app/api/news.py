@@ -93,6 +93,28 @@ def _parse_publish_flag(value: Optional[str]) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+async def _save_single_media(pool, news_id: int, media_file: UploadFile) -> Optional[dict]:
+    content = await media_file.read()
+    if not content:
+        return None
+
+    mime_type = _validate_upload(media_file, content)
+    filename, thumb, media_kind = await photo_svc.save_media(
+        content,
+        media_file.filename or "file.bin",
+        mime_type,
+    )
+    media_id = await news_svc.add_photo(pool, news_id, filename, thumb, media_kind, mime_type, len(content))
+    return {
+        "id": media_id,
+        "filename": filename,
+        "thumbnail_filename": thumb,
+        "media_kind": media_kind,
+        "mime_type": mime_type,
+        "size_bytes": len(content),
+    }
+
+
 def format_news(item: dict) -> dict:
     attachments = item.get("photos") or []
     normalized_media = [p for p in (_normalize_photo(photo) for photo in attachments) if p is not None]
@@ -144,17 +166,31 @@ async def create_news(
     news_id = await news_svc.create_news(pool, description, str(current_user["sub"]), color, parsed_dt, parsed_publish)
     upload_items = [*media, *photos]
     for media_file in upload_items[:MAX_NEWS_PHOTOS]:
-        content = await media_file.read()
-        if content:
-            mime_type = _validate_upload(media_file, content)
-            filename, thumb, media_kind = await photo_svc.save_media(
-                content,
-                media_file.filename or "file.bin",
-                mime_type,
-            )
-            await news_svc.add_photo(pool, news_id, filename, thumb, media_kind, mime_type, len(content))
+        await _save_single_media(pool, news_id, media_file)
     item = await news_svc.get_news_by_id(pool, news_id)
     return format_news(item)
+
+
+@router.post("/{news_id}/media", status_code=201)
+async def upload_news_media(
+    news_id: int,
+    media_file: UploadFile = File(...),
+    _=Depends(require_full_access),
+):
+    pool = await get_pool()
+    item = await news_svc.get_news_by_id(pool, news_id)
+    if not item:
+        raise HTTPException(404, "Новость не найдена")
+
+    current_count = len(item.get("photos") or [])
+    if current_count >= MAX_NEWS_PHOTOS:
+        raise HTTPException(400, "Достигнут лимит файлов для новости")
+
+    saved = await _save_single_media(pool, news_id, media_file)
+    if not saved:
+        raise HTTPException(400, "Пустой файл")
+
+    return _normalize_photo(saved)
 
 
 @router.get("/{news_id}")
@@ -199,15 +235,7 @@ async def update_news(
     remaining_slots = max(0, MAX_NEWS_PHOTOS - current_count + len(to_delete))
     upload_items = [*new_media, *new_photos]
     for media_file in upload_items[:remaining_slots]:
-        content = await media_file.read()
-        if content:
-            mime_type = _validate_upload(media_file, content)
-            filename, thumb, media_kind = await photo_svc.save_media(
-                content,
-                media_file.filename or "file.bin",
-                mime_type,
-            )
-            await news_svc.add_photo(pool, news_id, filename, thumb, media_kind, mime_type, len(content))
+        await _save_single_media(pool, news_id, media_file)
 
     await news_svc.update_news(
         pool,

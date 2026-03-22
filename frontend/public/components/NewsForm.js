@@ -65,6 +65,17 @@ export function renderNewsForm(container, onSaved) {
 
         <div id="form-error" class="form-error hidden"></div>
 
+        <div id="upload-overlay" class="upload-overlay hidden" aria-live="polite">
+          <div class="upload-overlay-card">
+            <div class="spinner"></div>
+            <p class="upload-overlay-text">Пожалуйста, не закрывайте окно до окончания загрузки</p>
+            <div class="upload-progress-caption" id="upload-progress-caption">0 / 0</div>
+            <div class="upload-progress-track">
+              <div class="upload-progress-bar" id="upload-progress-bar"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="field">
           <label>Описание</label>
           <textarea id="news-desc" rows="5" placeholder="Что произошло?">${isEdit ? escHtml(editing.description) : ''}</textarea>
@@ -135,6 +146,9 @@ export function renderNewsForm(container, onSaved) {
   let selectedColor = isEdit ? editing.color : 'amber';
   let newFiles = [];
   let deletedPhotoIds = [];
+  let isUploading = false;
+  let stagedNewsId = null;
+  let pendingUploads = [];
 
   // Color picker
   container.querySelectorAll('.color-dot').forEach(btn => {
@@ -209,7 +223,10 @@ export function renderNewsForm(container, onSaved) {
   });
 
   // Close / cancel
-  const close = () => setState({ showForm: false, editingNews: null });
+  const close = (force = false) => {
+    if (isUploading && !force) return;
+    setState({ showForm: false, editingNews: null });
+  };
   container.querySelector('#close-form').addEventListener('click', close);
   container.querySelector('#cancel-form').addEventListener('click', close);
   container.querySelector('#form-overlay').addEventListener('click', e => {
@@ -225,31 +242,73 @@ export function renderNewsForm(container, onSaved) {
     if (!desc) { errEl.textContent = 'Введите описание'; errEl.classList.remove('hidden'); return; }
 
     const saveBtn = container.querySelector('#save-form');
+    const overlayEl = container.querySelector('#upload-overlay');
+    const progressTextEl = container.querySelector('#upload-progress-caption');
+    const progressBarEl = container.querySelector('#upload-progress-bar');
+
+    const setUploadProgress = (done, total) => {
+      const safeTotal = Math.max(1, total);
+      const percent = Math.min(100, Math.round((done / safeTotal) * 100));
+      progressTextEl.textContent = `${done} / ${total}`;
+      progressBarEl.style.width = `${percent}%`;
+    };
+
     saveBtn.disabled = true;
     saveBtn.textContent = 'Сохраняем…';
     errEl.classList.add('hidden');
 
     try {
-      const fd = new FormData();
-      fd.append('description', desc);
-      fd.append('color', selectedColor);
-      if (datetimeVal) fd.append('created_at', datetimeVal);
-      fd.append('is_published', String(isPublished));
-      newFiles.forEach(f => fd.append('new_media', f));
       if (isEdit) {
+        const fd = new FormData();
+        fd.append('description', desc);
+        fd.append('color', selectedColor);
+        if (datetimeVal) fd.append('created_at', datetimeVal);
+        fd.append('is_published', String(isPublished));
+        newFiles.forEach(f => fd.append('new_media', f));
         fd.append('delete_photo_ids', JSON.stringify(deletedPhotoIds));
         await api.updateNews(editing.id, fd);
       } else {
-        newFiles.forEach(f => fd.append('media', f));
-        await api.createNews(fd);
+        if (!stagedNewsId) {
+          const created = await api.createNewsDraft({
+            description: desc,
+            color: selectedColor,
+            created_at: datetimeVal || null,
+            is_published: isPublished,
+          });
+          stagedNewsId = created.id;
+          pendingUploads = [...newFiles];
+        }
+
+        const total = newFiles.length;
+        let done = total - pendingUploads.length;
+
+        isUploading = true;
+        overlayEl.classList.remove('hidden');
+        saveBtn.textContent = pendingUploads.length > 0 ? 'Загружаем файлы…' : 'Сохраняем…';
+        setUploadProgress(done, total);
+
+        while (pendingUploads.length > 0) {
+          const nextFile = pendingUploads[0];
+          await api.uploadNewsMedia(stagedNewsId, nextFile);
+          pendingUploads.shift();
+          done += 1;
+          setUploadProgress(done, total);
+        }
       }
-      close();
+      close(true);
       onSaved();
     } catch (e) {
       errEl.textContent = e.message;
       errEl.classList.remove('hidden');
       saveBtn.disabled = false;
-      saveBtn.textContent = isEdit ? 'Сохранить' : 'Добавить';
+      saveBtn.textContent = isEdit
+        ? 'Сохранить'
+        : (stagedNewsId && pendingUploads.length > 0 ? 'Продолжить загрузку' : 'Добавить');
+    } finally {
+      if (!isEdit) {
+        isUploading = false;
+        overlayEl.classList.add('hidden');
+      }
     }
   });
 }

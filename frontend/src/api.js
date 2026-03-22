@@ -67,6 +67,21 @@ export const api = {
     return request('POST', '/news', formData, true);
   },
 
+  async createNewsDraft(payload) {
+    const fd = new FormData();
+    fd.append('description', payload.description);
+    fd.append('color', payload.color);
+    if (payload.created_at) fd.append('created_at', payload.created_at);
+    fd.append('is_published', String(!!payload.is_published));
+    return request('POST', '/news', fd, true);
+  },
+
+  async uploadNewsMedia(newsId, file) {
+    const fd = new FormData();
+    fd.append('media_file', file);
+    return request('POST', `/news/${newsId}/media`, fd, true);
+  },
+
   async updateNews(id, formData) {
     return request('PUT', `/news/${id}`, formData, true);
   },
