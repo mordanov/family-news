@@ -5,7 +5,7 @@ import json
 
 from app.api.auth import get_current_user, require_full_access
 from app.database import get_pool
-from app.services import news as news_svc, photos as photo_svc
+from app.services import news as news_svc, photos as photo_svc, fcm
 from app.config import (
     NEWS_COLORS,
     DEFAULT_COLOR,
@@ -163,11 +163,23 @@ async def create_news(
     pool = await get_pool()
     parsed_dt = _parse_datetime(created_at)
     parsed_publish = _parse_publish_flag(is_published)
-    news_id = await news_svc.create_news(pool, description, str(current_user["sub"]), color, parsed_dt, parsed_publish)
+    author = str(current_user["sub"])
+    news_id = await news_svc.create_news(pool, description, author, color, parsed_dt, parsed_publish)
     upload_items = [*media, *photos]
     for media_file in upload_items[:MAX_NEWS_PHOTOS]:
         await _save_single_media(pool, news_id, media_file)
     item = await news_svc.get_news_by_id(pool, news_id)
+
+    # Send FCM notification if news is published
+    if parsed_publish:
+        await fcm.send_news_notification(
+            pool,
+            news_id,
+            description,
+            author,
+            parsed_dt.isoformat() if parsed_dt else None,
+        )
+
     return format_news(item)
 
 
@@ -237,16 +249,31 @@ async def update_news(
     for media_file in upload_items[:remaining_slots]:
         await _save_single_media(pool, news_id, media_file)
 
+    # Check if we're publishing a previously unpublished news
+    was_published = bool(item.get("is_published"))
+    new_published = _parse_publish_flag(is_published)
+    
     await news_svc.update_news(
         pool,
         news_id,
         description,
         color,
         _parse_datetime(created_at),
-        _parse_publish_flag(is_published),
+        new_published,
         item.get("public_token"),
     )
     item = await news_svc.get_news_by_id(pool, news_id)
+
+    # Send FCM notification if news was just published (wasn't published before)
+    if new_published and not was_published:
+        await fcm.send_news_notification(
+            pool,
+            news_id,
+            description,
+            item.get("author", "admin"),
+            item.get("created_at", "").isoformat() if item.get("created_at") else None,
+        )
+
     return format_news(item)
 
 

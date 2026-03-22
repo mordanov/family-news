@@ -9,11 +9,13 @@ from app.api.news import router as news_router
 from app.api.users import router as users_router
 from app.config import PHOTOS_DIR, THUMBNAILS_DIR
 from app.services.photos import ensure_dirs
+from app.services import fcm
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     ensure_dirs()
+    fcm.initialize_firebase()
     yield
     await close_pool()
 

@@ -72,6 +72,16 @@ CREATE_TABLES_SQL = [
         created_at TIMESTAMPTZ DEFAULT NOW()
     );
     """,
+    """
+    CREATE TABLE IF NOT EXISTS fcm_tokens (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token VARCHAR(500) NOT NULL UNIQUE,
+        device_name VARCHAR(255),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    """,
 ]
 
 

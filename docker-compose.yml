@@ -36,8 +36,10 @@ services:
       USER1_PASSWORD: ${NEWS_USER1_PASSWORD:-admin123}
       USER2_LOGIN: ${NEWS_USER2_LOGIN:-user}
       USER2_PASSWORD: ${NEWS_USER2_PASSWORD:-user123}
+      FIREBASE_CREDENTIALS_PATH: ${FIREBASE_CREDENTIALS_PATH:-}
     volumes:
       - photos_data:/app/photos
+      - ${FIREBASE_CREDENTIALS_PATH:-/dev/null}:/app/firebase-credentials.json:ro
     expose:
       - "8000"
     depends_on:

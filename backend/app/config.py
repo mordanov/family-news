@@ -55,3 +55,8 @@ NEWS_COLORS = [
     {"id": "lime", "label": "Лаймовый", "value": "#84CC16"},
 ]
 DEFAULT_COLOR = "amber"
+
+# Firebase Cloud Messaging configuration
+FIREBASE_CREDENTIALS_PATH = os.getenv("FIREBASE_CREDENTIALS_PATH", None)
+FCM_ENABLED = FIREBASE_CREDENTIALS_PATH is not None and os.path.isfile(FIREBASE_CREDENTIALS_PATH)
+

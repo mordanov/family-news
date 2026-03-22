@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from app.api.auth import get_current_user, require_full_access
 from app.database import get_pool
 from app.services.auth import hash_password
+from app.services import fcm
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -19,6 +20,11 @@ class UserCreate(BaseModel):
 
 class UserRoleUpdate(BaseModel):
     role: str
+
+
+class FCMTokenRequest(BaseModel):
+    token: str = Field(min_length=1)
+    device_name: str = Field(default=None, max_length=255)
 
 
 def _format_user(user) -> dict:
@@ -128,5 +134,47 @@ async def delete_user(user_id: int, current_user=Depends(get_current_user), _=De
 
         await conn.execute("DELETE FROM users WHERE id=$1", user_id)
 
+
+@router.post("/fcm-token", status_code=201)
+async def register_fcm_token(
+    payload: FCMTokenRequest,
+    current_user=Depends(get_current_user),
+):
+    """
+    Register or update an FCM token for the current user.
+    Called by frontend to register device for push notifications.
+    """
+    pool = await get_pool()
+    user_id = current_user["user_id"]
+
+    try:
+        result = await fcm.register_fcm_token(
+            pool,
+            user_id,
+            payload.token,
+            payload.device_name,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Ошибка при регистрации токена")
+
+
+@router.delete("/fcm-token/{token}", status_code=204)
+async def unregister_fcm_token(
+    token: str,
+    current_user=Depends(get_current_user),
+):
+    """
+    Unregister an FCM token for the current user.
+    Called by frontend when user logs out or revokes notification permissions.
+    """
+    pool = await get_pool()
+    user_id = current_user["user_id"]
+
+    deleted = await fcm.unregister_fcm_token(pool, user_id, token)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Токен не найден")
 
 

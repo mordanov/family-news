@@ -26,6 +26,15 @@ async function bootstrapAuthenticatedState() {
       colorMap = Object.fromEntries(colors.map(c => [c.id, c.value]));
       setState({ user: me, colors });
       await loadPage(1);
+      
+      // Initialize FCM for push notifications
+      if (window.FCM) {
+        try {
+          await window.FCM.initialize();
+        } catch (error) {
+          console.error('FCM initialization error:', error);
+        }
+      }
     } catch {
       localStorage.removeItem('token');
       colorMap = {};
@@ -246,7 +255,15 @@ function renderApp(s) {
         }
       });
     }
-    document.getElementById('btn-logout').addEventListener('click', () => {
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+      // Unregister FCM token before logout
+      if (window.FCM) {
+        try {
+          await window.FCM.unregister();
+        } catch (error) {
+          console.error('FCM unregister error:', error);
+        }
+      }
       localStorage.removeItem('token');
       setState({ token: null, user: null, news: [], users: [], colors: [], showForm: false, showUsersManager: false, lightboxUrl: null });
     });
