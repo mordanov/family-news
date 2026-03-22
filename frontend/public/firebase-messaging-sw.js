@@ -7,9 +7,13 @@ importScripts('https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging-comp
 // Service worker runs in its own context, so config must be duplicated here.
 // Only messaging-related fields are needed here.
 firebase.initializeApp({
+  apiKey: "AIzaSyDNXvPUEnR2KqlO23QHEmzQw1ObTQVc_QE",
+  authDomain: "family-news-site.firebaseapp.com",
   projectId: "family-news-site",
+  storageBucket: "family-news-site.firebasestorage.app",
   messagingSenderId: "267967866878",
   appId: "1:267967866878:web:e838eca04806ed278142af",
+  measurementId: "G-3CCYWCEBTM",
 });
 
 const messaging = firebase.messaging();
