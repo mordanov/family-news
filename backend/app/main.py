@@ -33,7 +33,6 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    max_size=100*1048576, #100Mb
 )
 app.add_middleware(
     ContentSizeLimitMiddleware,
