@@ -16,6 +16,63 @@ let isInitialized = false;
 let currentToken = null;
 let swRegistration = null;
 
+function isFCMSupported() {
+  if (!window.isSecureContext) {
+    console.warn('FCM requires a secure context (HTTPS or localhost)');
+    return false;
+  }
+  if (!('Notification' in window)) {
+    console.warn('Browser does not support notifications');
+    return false;
+  }
+  if (!('serviceWorker' in navigator)) {
+    console.warn('Browser does not support service workers');
+    return false;
+  }
+  if (!('PushManager' in window)) {
+    console.warn('Browser does not support Push API');
+    return false;
+  }
+  return true;
+}
+
+async function waitForActiveServiceWorker(registration) {
+  if (registration?.active) {
+    return registration;
+  }
+
+  const worker = registration?.installing || registration?.waiting;
+  if (worker) {
+    await new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error('Timed out waiting for service worker activation'));
+      }, 10000);
+
+      const onStateChange = () => {
+        if (worker.state === 'activated') {
+          clearTimeout(timeoutId);
+          worker.removeEventListener('statechange', onStateChange);
+          resolve();
+        }
+        if (worker.state === 'redundant') {
+          clearTimeout(timeoutId);
+          worker.removeEventListener('statechange', onStateChange);
+          reject(new Error('Service worker became redundant before activation'));
+        }
+      };
+
+      worker.addEventListener('statechange', onStateChange);
+      onStateChange();
+    });
+  }
+
+  const readyRegistration = await navigator.serviceWorker.ready;
+  if (!readyRegistration?.active) {
+    throw new Error('Service worker is registered but not active');
+  }
+  return readyRegistration;
+}
+
 /**
  * Initialize Firebase and FCM
  * Should be called after user authentication
@@ -27,6 +84,10 @@ async function initializeFCM() {
   }
 
   try {
+    if (!isFCMSupported()) {
+      return;
+    }
+
     // Check if Firebase config is valid
     if (!window.FIREBASE_CONFIG || !window.FIREBASE_CONFIG.projectId) {
       console.warn('Firebase config not available, FCM disabled');
@@ -46,9 +107,11 @@ async function initializeFCM() {
       swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
         scope: '/',
       });
-      console.log('Service Worker registered:', swRegistration);
+      swRegistration = await waitForActiveServiceWorker(swRegistration);
+      console.log('Service Worker active:', swRegistration);
     } catch (error) {
       console.error('Service Worker registration failed:', error);
+      return;
     }
 
     // Handle foreground messages
@@ -72,9 +135,7 @@ async function initializeFCM() {
  */
 async function requestNotificationPermission() {
   try {
-    // Check if browser supports notifications
-    if (!('Notification' in window)) {
-      console.log('Browser does not support notifications');
+    if (!isFCMSupported()) {
       return;
     }
 
@@ -114,10 +175,17 @@ async function registerFCMToken() {
       return;
     }
 
+    if (!swRegistration) {
+      console.warn('No active service worker registration available for FCM');
+      return;
+    }
+
+    swRegistration = await waitForActiveServiceWorker(swRegistration);
+
     // Get the token
     const token = await messaging.getToken({
       vapidKey: window.FIREBASE_VAPID_KEY || '',
-      serviceWorkerRegistration: swRegistration || undefined,
+      serviceWorkerRegistration: swRegistration,
     });
 
     if (!token) {
