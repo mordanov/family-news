@@ -255,6 +255,35 @@ function renderApp(s) {
         }
       });
     }
+    
+    // Add notification subscription button
+    const notifContainer = document.getElementById('notification-btn-container');
+    if (notifContainer) {
+      const notifBtn = renderNotificationButton(
+        async () => {
+          // On subscribe
+          try {
+            if (window.FCM) {
+              await window.FCM.requestPermission();
+            }
+          } catch (error) {
+            console.error('Subscription error:', error);
+          }
+        },
+        async () => {
+          // On unsubscribe
+          try {
+            if (window.FCM) {
+              await window.FCM.unregister();
+            }
+          } catch (error) {
+            console.error('Unsubscription error:', error);
+          }
+        }
+      );
+      notifContainer.appendChild(notifBtn);
+    }
+    
     document.getElementById('btn-logout').addEventListener('click', async () => {
       // Unregister FCM token before logout
       if (window.FCM) {

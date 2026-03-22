@@ -76,6 +76,29 @@ body {
 }
 .btn-ghost:hover { color: var(--teal); background: var(--teal-muted); }
 
+.notification-btn {
+  transition: all 0.2s;
+}
+
+.notification-btn.subscribed {
+  background: var(--teal);
+  color: white;
+  border-color: var(--teal);
+}
+
+.notification-btn.subscribed:hover {
+  background: var(--teal-dark);
+  border-color: var(--teal-dark);
+  opacity: 0.9;
+}
+
+.notification-btn.blocked {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--border);
+  color: var(--text-muted);
+}
+
 .btn-icon {
   background: none;
   border: none;

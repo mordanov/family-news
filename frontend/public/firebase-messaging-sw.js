@@ -5,14 +5,17 @@ importScripts('https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging-compat.js');
 
 // Service worker runs in its own context, so config must be duplicated here.
+// Only essential fields for FCM are needed (no apiKey, authDomain, storageBucket, measurementId)
+// 
+// Why no apiKey?
+// - apiKey is not required for Firebase messaging in Service Workers
+// - FCM uses VAPID key for push security (set in main app via window.FIREBASE_VAPID_KEY)
+// - Backend uses Firebase Admin SDK credentials for sending messages (private key in firebase-credentials.json)
+// - Keeping minimal config reduces surface area and improves security
 firebase.initializeApp({
-  apiKey: "AIzaSyDNXvPUEnR2KqlO23QHEmzQw1ObTQVc_QE",
-  authDomain: "family-news-site.firebaseapp.com",
   projectId: "family-news-site",
-  storageBucket: "family-news-site.firebasestorage.app",
   messagingSenderId: "267967866878",
   appId: "1:267967866878:web:e838eca04806ed278142af",
-  measurementId: "G-3CCYWCEBTM",
 });
 
 const messaging = firebase.messaging();
@@ -64,4 +67,3 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('notificationclose', (event) => {
   console.log('Notification closed:', event.notification);
 });
-

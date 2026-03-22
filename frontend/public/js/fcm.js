@@ -8,15 +8,8 @@
  * - Foreground message handling
  */
 
-// Firebase configuration object (loaded from window or set elsewhere)
-let firebaseConfig = window.FIREBASE_CONFIG || {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: "",
-};
+// Firebase configuration is defined in index.html and exposed via window.FIREBASE_CONFIG
+// Do NOT redefine it here - just use the global reference
 
 let messaging = null;
 let isInitialized = false;
@@ -35,14 +28,14 @@ async function initializeFCM() {
 
   try {
     // Check if Firebase config is valid
-    if (!firebaseConfig.projectId) {
+    if (!window.FIREBASE_CONFIG || !window.FIREBASE_CONFIG.projectId) {
       console.warn('Firebase config not available, FCM disabled');
       return;
     }
 
     // Initialize Firebase app if not already initialized
     if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
+      firebase.initializeApp(window.FIREBASE_CONFIG);
     }
 
     // Get messaging instance
@@ -327,7 +320,7 @@ function getDeviceName() {
  * @param {Object} config - Firebase config object
  */
 function setFirebaseConfig(config) {
-  firebaseConfig = config;
+  window.FIREBASE_CONFIG = config;
 }
 
 // Export functions for use in other modules
