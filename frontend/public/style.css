@@ -409,6 +409,38 @@ body {
   display: block;
   border-radius: 8px;
 }
+
+/* Видео превью как картинки */
+.video-thumb-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  width: 90px;
+  height: 90px;
+  transition: transform 0.15s, box-shadow 0.15s;
+  display: inline-block;
+}
+.video-thumb-btn:hover { transform: scale(1.04); box-shadow: 0 4px 16px rgba(0,0,0,0.18); }
+.video-thumb {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+  display: block;
+  border-radius: 8px;
+}
+.video-thumb-overlay {
+  position: absolute;
+  left: 0; top: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 2;
+}
 .media-video-wrap {
   width: min(280px, 100%);
 }

@@ -76,6 +76,7 @@ export function renderNewsCard(news, colorMap, onEdit, onRotateLink, onDelete, c
   }
 
   // Lightbox
+  // Lightbox for images
   const imageItems = mediaItems.filter(item => (item.media_kind || 'image') === 'image' && item.url);
   const photoUrls = imageItems.map(item => item.url);
   card.querySelectorAll('.photo-thumb-btn').forEach(btn => {
@@ -86,6 +87,17 @@ export function renderNewsCard(news, colorMap, onEdit, onRotateLink, onDelete, c
         lightboxUrl: btn.dataset.src,
         lightboxPhotos: photoUrls,
         lightboxIndex: imageIndex,
+        lightboxType: 'image',
+      });
+    });
+  });
+  // Lightbox for videos
+  card.querySelectorAll('.video-thumb-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setState({
+        lightboxUrl: btn.dataset.src,
+        lightboxType: 'video',
+        lightboxPoster: btn.dataset.poster || '',
       });
     });
   });
@@ -112,11 +124,12 @@ function escHtml(str) {
 function renderMediaItem(item, index, imageIndexByUrl) {
   const kind = item.media_kind || 'image';
   if (kind === 'video') {
-    const posterAttr = item.thumbnail_url ? ` poster="${item.thumbnail_url}"` : '';
+    const poster = item.thumbnail_url || item.url;
     return `
-      <div class="media-video-wrap" data-idx="${index}">
-        <video src="${item.url}"${posterAttr} controls preload="metadata" class="media-video" title="Видео"></video>
-      </div>
+      <button class="video-thumb-btn" data-src="${item.url}" data-poster="${poster}" title="Открыть видео">
+        <span class="video-thumb-overlay"><svg width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="rgba(0,0,0,0.38)"/><polygon points="13,10 24,16 13,22" fill="#fff"/></svg></span>
+        <img src="${poster}" alt="видео превью" loading="lazy" class="video-thumb"/>
+      </button>
     `;
   }
 
@@ -152,4 +165,3 @@ async function copyToClipboard(text) {
   document.execCommand('copy');
   temp.remove();
 }
-

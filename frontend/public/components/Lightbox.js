@@ -12,19 +12,28 @@ export function renderLightbox(container, lightboxState) {
   const hasCarousel = count > 1;
   const safeIndex = count ? ((lightboxState.lightboxIndex || 0) % count + count) % count : 0;
   const currentUrl = count ? photos[safeIndex] : lightboxState.lightboxUrl;
+  const type = lightboxState.lightboxType || 'image';
+  const poster = lightboxState.lightboxPoster || '';
 
   if (!currentUrl) {
     container.innerHTML = '';
     return;
   }
 
+  let mediaHtml = '';
+  if (type === 'video') {
+    mediaHtml = `<video src="${currentUrl}" class="lightbox-img" id="lb-video" controls autoplay preload="metadata" style="background:#000;max-width:96vw;max-height:92vh;border-radius:8px;box-shadow:0 8px 48px rgba(0,0,0,0.5);object-fit:contain;"${poster ? ` poster='${poster}'` : ''}></video>`;
+  } else {
+    mediaHtml = `<img src="${currentUrl}" alt="фото" class="lightbox-img" id="lb-img"/>`;
+  }
+
   container.innerHTML = `
     <div class="lightbox-overlay" id="lightbox">
       <button class="lightbox-close" id="lb-close" title="Закрыть">✕</button>
-      ${hasCarousel ? `<button class="lightbox-nav prev" id="lb-prev" title="Предыдущее">‹</button>` : ''}
-      <img src="${currentUrl}" alt="фото" class="lightbox-img" id="lb-img"/>
-      ${hasCarousel ? `<button class="lightbox-nav next" id="lb-next" title="Следующее">›</button>` : ''}
-      ${hasCarousel ? `<div class="lightbox-counter">${safeIndex + 1} / ${count}</div>` : ''}
+      ${hasCarousel && type !== 'video' ? `<button class="lightbox-nav prev" id="lb-prev" title="Предыдущее">‹</button>` : ''}
+      ${mediaHtml}
+      ${hasCarousel && type !== 'video' ? `<button class="lightbox-nav next" id="lb-next" title="Следующее">›</button>` : ''}
+      ${hasCarousel && type !== 'video' ? `<div class="lightbox-counter">${safeIndex + 1} / ${count}</div>` : ''}
     </div>
   `;
 
@@ -38,13 +47,13 @@ export function renderLightbox(container, lightboxState) {
       document.removeEventListener('keydown', activeKeyHandler);
       activeKeyHandler = null;
     }
-    setState({ lightboxUrl: null, lightboxPhotos: [], lightboxIndex: 0 });
+    setState({ lightboxUrl: null, lightboxPhotos: [], lightboxIndex: 0, lightboxType: null, lightboxPoster: null });
   };
 
   const move = (step) => {
     if (!count) return;
     const nextIndex = (safeIndex + step + count) % count;
-    setState({ lightboxUrl: photos[nextIndex], lightboxPhotos: photos, lightboxIndex: nextIndex });
+    setState({ lightboxUrl: photos[nextIndex], lightboxPhotos: photos, lightboxIndex: nextIndex, lightboxType: 'image' });
   };
 
   const overlay = container.querySelector('#lightbox');
@@ -67,13 +76,16 @@ export function renderLightbox(container, lightboxState) {
   };
 
   const resetDragVisual = () => {
-    imageEl.classList.remove('swiping');
-    imageEl.style.transform = '';
-    imageEl.style.opacity = '';
+    if (imageEl) {
+      imageEl.classList.remove('swiping');
+      imageEl.style.transform = '';
+      imageEl.style.opacity = '';
+    }
     resetOverlayParallax();
   };
 
   const onTouchStart = (e) => {
+    if (!imageEl) return;
     const t = e.changedTouches && e.changedTouches[0];
     if (!t) return;
     touchStartX = t.clientX;
@@ -84,7 +96,7 @@ export function renderLightbox(container, lightboxState) {
   };
 
   const onTouchMove = (e) => {
-    if (!hasCarousel) return;
+    if (!hasCarousel || !imageEl) return;
     const t = e.changedTouches && e.changedTouches[0];
     if (!t) return;
     const dx = t.clientX - touchStartX;
@@ -98,7 +110,7 @@ export function renderLightbox(container, lightboxState) {
   };
 
   const onTouchEnd = (e) => {
-    if (!hasCarousel) {
+    if (!hasCarousel || !imageEl) {
       resetDragVisual();
       return;
     }
@@ -131,7 +143,7 @@ export function renderLightbox(container, lightboxState) {
   };
 
   container.querySelector('#lb-close').addEventListener('click', close);
-  if (hasCarousel) {
+  if (hasCarousel && type !== 'video') {
     container.querySelector('#lb-prev').addEventListener('click', () => move(-1));
     container.querySelector('#lb-next').addEventListener('click', () => move(1));
   }
@@ -145,7 +157,7 @@ export function renderLightbox(container, lightboxState) {
 
   activeKeyHandler = (e) => {
     if (e.key === 'Escape') close();
-    if (!hasCarousel) return;
+    if (!hasCarousel || type === 'video') return;
     if (e.key === 'ArrowLeft') move(-1);
     if (e.key === 'ArrowRight') move(1);
   };
