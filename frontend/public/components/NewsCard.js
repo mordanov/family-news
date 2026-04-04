@@ -105,16 +105,18 @@ export function renderNewsCard(news, colorMap, onEdit, onRotateLink, onDelete, c
   return card;
 }
 
+const _TZ = 'Europe/Madrid';
+
 function formatDate(iso) {
   if (!iso) return '';
   const d = new Date(iso);
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) +
-    ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: _TZ }) +
+    ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: _TZ });
 }
 
 function formatDateFull(iso) {
   if (!iso) return '';
-  return new Date(iso).toLocaleString('ru-RU');
+  return new Date(iso).toLocaleString('ru-RU', { timeZone: _TZ });
 }
 
 function escHtml(str) {

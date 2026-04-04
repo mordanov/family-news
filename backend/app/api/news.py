@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 import json
+
+_TIMEZONE = ZoneInfo("Europe/Madrid")
 
 from app.api.auth import get_current_user, require_full_access
 from app.database import get_pool
@@ -23,12 +26,12 @@ ALLOWED_MEDIA_MIME = ALLOWED_IMAGE_MIME | ALLOWED_VIDEO_MIME | ALLOWED_AUDIO_MIM
 
 
 def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
-    """Parse ISO-8601 / datetime-local string, return None if empty or invalid."""
+    """Parse datetime-local string (Europe/Madrid), return UTC-aware datetime."""
     if not value:
         return None
     try:
-        # datetime-local sends "YYYY-MM-DDTHH:MM", fromisoformat handles it
-        return datetime.fromisoformat(value)
+        naive = datetime.fromisoformat(value)
+        return naive.replace(tzinfo=_TIMEZONE).astimezone(timezone.utc)
     except ValueError:
         return None
 

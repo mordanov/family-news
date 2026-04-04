@@ -336,7 +336,13 @@ function renderExistingMediaPreview(item) {
   return '<div class="existing-file-badge">Файл</div>';
 }
 
+/** Convert a UTC Date to "YYYY-MM-DDTHH:MM" in Europe/Madrid for datetime-local input. */
 function _toDatetimeLocal(date) {
-  const pad = n => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Madrid',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(date);
+  const p = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
