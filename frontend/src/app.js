@@ -80,8 +80,18 @@ function render(s) {
     return;
   }
 
-  if (!s.user && !bootstrapPromise) {
-    void bootstrapAuthenticatedState();
+  if (!s.user) {
+    // Bootstrap in progress: start it if not already running.
+    // Do NOT call renderApp yet — the header DOM is built once (guarded by
+    // `if (!feedEl)`) and if built with user=null, canManage=false sticks forever
+    // because subsequent renders skip the header rebuild when feedEl exists.
+    if (!bootstrapPromise) {
+      void bootstrapAuthenticatedState();
+    }
+    appEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#888">Загрузка…</div>';
+    formEl.innerHTML = '';
+    lbEl.innerHTML = '';
+    return;
   }
 
   // Guard: if role changed, close modals that require full_access
