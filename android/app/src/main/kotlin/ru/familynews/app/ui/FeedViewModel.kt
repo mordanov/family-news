@@ -19,7 +19,7 @@ class FeedViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as FamilyNewsApp
     private fun repo() = NewsRepository(
         NetworkFactory.createNewsApi(app.baseUrl) { app.accessToken },
-        MediaPreprocessor(application),
+        MediaPreprocessor(app),
     )
 
     var items by mutableStateOf<List<NewsItemDto>>(emptyList())

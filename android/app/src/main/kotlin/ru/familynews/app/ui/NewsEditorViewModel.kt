@@ -23,7 +23,7 @@ class NewsEditorViewModel(application: Application) : AndroidViewModel(applicati
     private val app = application as FamilyNewsApp
     private fun repo() = NewsRepository(
         NetworkFactory.createNewsApi(app.baseUrl) { app.accessToken },
-        MediaPreprocessor(application),
+        MediaPreprocessor(app),
     )
 
     var description by mutableStateOf("")

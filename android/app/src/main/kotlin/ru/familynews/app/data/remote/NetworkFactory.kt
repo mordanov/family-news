@@ -24,8 +24,8 @@ object NetworkFactory {
      */
     fun createNewsApi(
         baseUrl: String,
-        accessTokenProvider: () -> String?,
         debugLogging: Boolean = false,
+        accessTokenProvider: () -> String?,
     ): NewsApi {
         val normalized = baseUrl.trimEnd('/')
         val apiRoot = "$normalized/api/".toHttpUrl()
