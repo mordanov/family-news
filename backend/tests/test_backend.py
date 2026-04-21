@@ -72,9 +72,9 @@ def test_detect_media_kind_by_mime():
 
 
 def test_video_thumbnail_name_uses_jpg_extension():
-    from app.services.photos import _video_thumbnail_name
-
-    assert _video_thumbnail_name("abc123.mp4") == "thumb_abc123.jpg"
+    filename, thumb = generate_filename("abc123.mp4", media_kind="video")
+    assert filename.endswith(".mp4")
+    assert thumb.endswith(".jpg")
 
 
 def test_delete_photo_files_missing_files():
@@ -124,7 +124,8 @@ async def test_save_media_video_generates_thumbnail_with_ffmpeg(tmp_path):
 
     with patch("app.services.photos.PHOTOS_DIR", str(tmp_path)), \
          patch("app.services.photos.THUMBNAILS_DIR", str(tmp_path / "thumbs")), \
-         patch("app.services.photos.generate_video_thumbnail") as gen_thumb:
+         patch("app.services.photos._transcode_video", new=AsyncMock(return_value=True)), \
+         patch("app.services.photos._generate_video_thumbnail", new=AsyncMock(return_value=True)) as gen_thumb:
         filename, thumb, media_kind = await save_media(payload, "clip.mp4", "video/mp4")
 
     assert media_kind == "video"
@@ -223,13 +224,13 @@ def test_parse_publish_flag_falsey_values():
 async def test_save_single_media_returns_none_for_empty_file():
     from app.api.news import _save_single_media
 
-    upload = UploadFile(filename="empty.jpg", file=io.BytesIO(b""))
-    with patch("app.api.news.photo_svc.save_media", new=AsyncMock()) as save_media_mock, \
+    upload = UploadFile(filename="empty.jpg", file=io.BytesIO(b""), content_type="image/jpeg")
+    with patch("app.api.news.photo_svc.save_media_from_file", new=AsyncMock()) as save_mock, \
          patch("app.api.news.news_svc.add_photo", new=AsyncMock()) as add_photo_mock:
         result = await _save_single_media(object(), 123, upload)
 
     assert result is None
-    save_media_mock.assert_not_called()
+    save_mock.assert_not_called()
     add_photo_mock.assert_not_called()
 
 
@@ -237,9 +238,8 @@ async def test_save_single_media_returns_none_for_empty_file():
 async def test_save_single_media_persists_file_metadata():
     from app.api.news import _save_single_media
 
-    upload = UploadFile(filename="photo.jpg", file=io.BytesIO(b"abc"))
-    with patch("app.api.news._validate_upload", return_value="image/jpeg"), \
-         patch("app.api.news.photo_svc.save_media", new=AsyncMock(return_value=("f.jpg", "thumb_f.jpg", "image"))), \
+    upload = UploadFile(filename="photo.jpg", file=io.BytesIO(b"abc"), content_type="image/jpeg")
+    with patch("app.api.news.photo_svc.save_media_from_file", new=AsyncMock(return_value=("f.jpg", "thumb_f.jpg", "image"))), \
          patch("app.api.news.news_svc.add_photo", new=AsyncMock(return_value=77)):
         result = await _save_single_media(object(), 55, upload)
 
