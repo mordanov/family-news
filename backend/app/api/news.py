@@ -3,6 +3,8 @@ from typing import Optional
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 import json
+import os
+import tempfile
 
 _TIMEZONE = ZoneInfo("Europe/Madrid")
 
@@ -74,20 +76,7 @@ def _normalize_photo(photo: dict | str) -> Optional[dict]:
     }
 
 
-def _validate_upload(media_file: UploadFile, content: bytes):
-    mime_type = (media_file.content_type or "").lower()
-    if mime_type not in ALLOWED_MEDIA_MIME:
-        raise HTTPException(400, f"Неподдерживаемый тип файла: {mime_type or 'unknown'}")
-
-    size = len(content)
-    if mime_type in ALLOWED_IMAGE_MIME and size > MAX_IMAGE_BYTES:
-        raise HTTPException(400, "Слишком большое изображение")
-    if mime_type in ALLOWED_VIDEO_MIME and size > MAX_VIDEO_BYTES:
-        raise HTTPException(400, "Слишком большое видео")
-    if mime_type in ALLOWED_AUDIO_MIME and size > MAX_AUDIO_BYTES:
-        raise HTTPException(400, "Слишком большой аудиофайл")
-
-    return mime_type
+_UPLOAD_CHUNK = 1024 * 1024  # 1 MB
 
 
 def _parse_publish_flag(value: Optional[str]) -> bool:
@@ -97,24 +86,53 @@ def _parse_publish_flag(value: Optional[str]) -> bool:
 
 
 async def _save_single_media(pool, news_id: int, media_file: UploadFile) -> Optional[dict]:
-    content = await media_file.read()
-    if not content:
-        return None
+    mime_type = (media_file.content_type or "").lower()
+    if mime_type not in ALLOWED_MEDIA_MIME:
+        raise HTTPException(400, f"Неподдерживаемый тип файла: {mime_type or 'unknown'}")
 
-    mime_type = _validate_upload(media_file, content)
-    filename, thumb, media_kind = await photo_svc.save_media(
-        content,
-        media_file.filename or "file.bin",
-        mime_type,
-    )
-    media_id = await news_svc.add_photo(pool, news_id, filename, thumb, media_kind, mime_type, len(content))
+    if mime_type in ALLOWED_IMAGE_MIME:
+        max_bytes, err_msg = MAX_IMAGE_BYTES, "Слишком большое изображение"
+    elif mime_type in ALLOWED_VIDEO_MIME:
+        max_bytes, err_msg = MAX_VIDEO_BYTES, "Слишком большое видео"
+    else:
+        max_bytes, err_msg = MAX_AUDIO_BYTES, "Слишком большой аудиофайл"
+
+    src_ext = os.path.splitext(media_file.filename or "")[1]
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=src_ext)
+    total_size = 0
+    try:
+        with os.fdopen(tmp_fd, "wb") as f:
+            while True:
+                chunk = await media_file.read(_UPLOAD_CHUNK)
+                if not chunk:
+                    break
+                total_size += len(chunk)
+                if total_size > max_bytes:
+                    raise HTTPException(400, err_msg)
+                f.write(chunk)
+
+        if total_size == 0:
+            return None
+
+        filename, thumb, media_kind = await photo_svc.save_media_from_file(
+            tmp_path,
+            media_file.filename or "file.bin",
+            mime_type,
+        )
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+    media_id = await news_svc.add_photo(pool, news_id, filename, thumb, media_kind, mime_type, total_size)
     return {
         "id": media_id,
         "filename": filename,
         "thumbnail_filename": thumb,
         "media_kind": media_kind,
         "mime_type": mime_type,
-        "size_bytes": len(content),
+        "size_bytes": total_size,
     }
 
 

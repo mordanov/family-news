@@ -12,6 +12,12 @@ PHOTOS_DIR = os.getenv("PHOTOS_DIR", "/app/photos")
 THUMBNAILS_DIR = os.getenv("THUMBNAILS_DIR", "/app/photos/thumbnails")
 THUMBNAIL_SIZE = (300, 300)
 
+IMAGE_MAX_DIMENSION = int(os.getenv("IMAGE_MAX_DIMENSION", "1920"))
+IMAGE_QUALITY = int(os.getenv("IMAGE_QUALITY", "85"))
+VIDEO_MAX_HEIGHT = int(os.getenv("VIDEO_MAX_HEIGHT", "1080"))
+VIDEO_CRF = int(os.getenv("VIDEO_CRF", "23"))
+VIDEO_PRESET = os.getenv("VIDEO_PRESET", "fast")
+
 ALLOWED_IMAGE_MIME = {
     "image/jpeg",
     "image/jpg",
