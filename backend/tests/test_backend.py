@@ -224,7 +224,11 @@ def test_parse_publish_flag_falsey_values():
 async def test_save_single_media_returns_none_for_empty_file():
     from app.api.news import _save_single_media
 
-    upload = UploadFile(filename="empty.jpg", file=io.BytesIO(b""), content_type="image/jpeg")
+    upload = MagicMock()
+    upload.filename = "empty.jpg"
+    upload.content_type = "image/jpeg"
+    upload.read = AsyncMock(return_value=b"")
+
     with patch("app.api.news.photo_svc.save_media_from_file", new=AsyncMock()) as save_mock, \
          patch("app.api.news.news_svc.add_photo", new=AsyncMock()) as add_photo_mock:
         result = await _save_single_media(object(), 123, upload)
@@ -238,7 +242,11 @@ async def test_save_single_media_returns_none_for_empty_file():
 async def test_save_single_media_persists_file_metadata():
     from app.api.news import _save_single_media
 
-    upload = UploadFile(filename="photo.jpg", file=io.BytesIO(b"abc"), content_type="image/jpeg")
+    upload = MagicMock()
+    upload.filename = "photo.jpg"
+    upload.content_type = "image/jpeg"
+    upload.read = AsyncMock(side_effect=[b"abc", b""])
+
     with patch("app.api.news.photo_svc.save_media_from_file", new=AsyncMock(return_value=("f.jpg", "thumb_f.jpg", "image"))), \
          patch("app.api.news.news_svc.add_photo", new=AsyncMock(return_value=77)):
         result = await _save_single_media(object(), 55, upload)
