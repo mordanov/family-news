@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from datetime import timedelta
+from fastapi import APIRouter, Depends, HTTPException, status, Form
+from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from app.database import get_pool
 from app.services.auth import verify_password, create_access_token, decode_token
+from app.config import REMEMBER_ME_EXPIRE_DAYS
 import asyncpg
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -43,14 +45,27 @@ async def require_full_access(current_user=Depends(get_current_user)):
     return current_user
 
 
+class LoginForm:
+    def __init__(
+        self,
+        username: str = Form(...),
+        password: str = Form(...),
+        remember_me: bool = Form(False),
+    ):
+        self.username = username
+        self.password = password
+        self.remember_me = remember_me
+
+
 @router.post("/login", response_model=Token)
-async def login(form: OAuth2PasswordRequestForm = Depends()):
+async def login(form: LoginForm = Depends()):
     pool = await get_pool()
     async with pool.acquire() as conn:
         user = await conn.fetchrow("SELECT * FROM users WHERE login=$1", form.username)
     if not user or not verify_password(form.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Неверный логин или пароль")
-    token = create_access_token({"sub": user["login"], "user_id": user["id"], "role": user["role"]})
+    expires = timedelta(days=REMEMBER_ME_EXPIRE_DAYS) if form.remember_me else None
+    token = create_access_token({"sub": user["login"], "user_id": user["id"], "role": user["role"]}, expires_delta=expires)
     return {"access_token": token, "token_type": "bearer"}
 
 

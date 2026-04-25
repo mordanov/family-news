@@ -1,5 +1,13 @@
+const _getCookie = (name) => {
+  const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'))
+  return m ? decodeURIComponent(m[1]) : null
+}
+const _storedToken = localStorage.getItem('token')
+const _cookieToken = _getCookie('remembered_token')
+if (!_storedToken && _cookieToken) localStorage.setItem('token', _cookieToken)
+
 export const state = {
-  token: localStorage.getItem('token') || null,
+  token: _storedToken || _cookieToken || null,
   user: null,
   news: [],
   total: 0,

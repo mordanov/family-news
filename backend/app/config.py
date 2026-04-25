@@ -7,6 +7,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://newsfeed:newsfeed123@loca
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+REMEMBER_ME_EXPIRE_DAYS = 30
 
 PHOTOS_DIR = os.getenv("PHOTOS_DIR", "/app/photos")
 THUMBNAILS_DIR = os.getenv("THUMBNAILS_DIR", "/app/photos/thumbnails")

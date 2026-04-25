@@ -19,6 +19,7 @@ async function request(method, path, body, isFormData = false) {
   });
 
   if (resp.status === 401) {
+    document.cookie = 'remembered_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
     const err = await resp.json().catch(() => ({}));
     const unauthorized = new Error(err.detail || 'Сессия истекла. Войдите снова.');
     unauthorized.code = 'UNAUTHORIZED';
@@ -35,10 +36,11 @@ async function request(method, path, body, isFormData = false) {
 }
 
 export const api = {
-  async login(login, password) {
+  async login(login, password, rememberMe = false) {
     const form = new URLSearchParams();
     form.append('username', login);
     form.append('password', password);
+    form.append('remember_me', rememberMe ? 'true' : 'false');
     const resp = await fetch(BASE + '/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

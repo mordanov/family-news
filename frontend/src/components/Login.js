@@ -24,6 +24,10 @@ export function renderLogin(container) {
           <label for="pass-input">Пароль</label>
           <input id="pass-input" type="password" autocomplete="current-password" placeholder="Введите пароль" />
         </div>
+        <label id="remember-label" style="display:flex;align-items:center;width:100%;gap:0.5rem;font-size:13px;cursor:pointer;padding:2px 0">
+          <input id="remember-check" type="checkbox" style="flex-shrink:0" />
+          <span style="flex:1">Запомнить меня</span>
+        </label>
         <button id="login-btn" class="btn-primary btn-full">Войти</button>
       </div>
     </div>
@@ -33,19 +37,30 @@ export function renderLogin(container) {
   const passInput = container.querySelector('#pass-input');
   const btn = container.querySelector('#login-btn');
   const errEl = container.querySelector('#login-error');
+  const rememberCheck = container.querySelector('#remember-check');
+
+  rememberCheck.checked = localStorage.getItem('remember_me') === 'true';
+
+  const setCookie = (name, value, days) => {
+    const expires = new Date(Date.now() + days * 864e5).toUTCString();
+    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Strict`;
+  };
 
   async function doLogin() {
     const login = loginInput.value.trim();
     const password = passInput.value;
+    const rememberMe = rememberCheck.checked;
     if (!login || !password) return;
 
+    localStorage.setItem('remember_me', String(rememberMe));
     btn.disabled = true;
     btn.textContent = 'Входим…';
     errEl.classList.add('hidden');
 
     try {
-      const data = await api.login(login, password);
+      const data = await api.login(login, password, rememberMe);
       localStorage.setItem('token', data.access_token);
+      if (rememberMe) setCookie('remembered_token', data.access_token, 30);
       setState({ token: data.access_token });
     } catch (e) {
       errEl.textContent = e.message;
