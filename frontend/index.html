@@ -7,21 +7,17 @@
   <meta name="description" content="Семейная новостная лента"/>
   <title>Семейная лента</title>
 
-  <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.svg"/>
-  <link rel="apple-touch-icon" href="/favicon.svg"/>
   <link rel="manifest" href="/manifest.json"/>
 
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="/style.css"/>
 
   <!-- Firebase SDK for Cloud Messaging -->
   <script defer src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging-compat.js"></script>
   <script>
-    const firebaseConfig = {
+    window.FIREBASE_CONFIG = {
       apiKey: "AIzaSyDNXvPUEnR2KqlO23QHEmzQw1ObTQVc_QE",
       authDomain: "family-news-site.firebaseapp.com",
       projectId: "family-news-site",
@@ -30,15 +26,12 @@
       appId: "1:267967866878:web:e838eca04806ed278142af",
       measurementId: "G-3CCYWCEBTM"
     };
-    window.FIREBASE_CONFIG = firebaseConfig;
     window.FIREBASE_VAPID_KEY = "BKST-4kiuaTduMo6UqC5iiuydGocv6uZC9lt7jDYTmY3wp0tkcFKVuXxdjnsTqk_w7hIA0gSfEWBIbT-1ci1U8Y";
   </script>
   <script defer src="/js/fcm.js"></script>
 </head>
 <body>
-  <div id="app"></div>
-  <div id="form-mount"></div>
-  <div id="lightbox-mount"></div>
-  <script type="module" src="/app.js"></script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
