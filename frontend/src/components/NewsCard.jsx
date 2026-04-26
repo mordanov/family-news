@@ -50,9 +50,11 @@ export default function NewsCard({ news, colorMap, canManage, onEdit, onDelete, 
                 title={p.media_kind === 'video' ? 'Открыть видео' : 'Открыть фото'}
                 onClick={() => onOpenLightbox(mediaItems, i)}
               >
-                {p.thumbnail_url
-                  ? <img src={p.thumbnail_url} alt={p.media_kind === 'video' ? 'видео' : 'фото'} loading="lazy" className="photo-thumb" />
-                  : <div className="photo-thumb photo-thumb-placeholder" />
+                {p.media_kind === 'video'
+                  ? (p.thumbnail_url && p.thumbnail_url !== p.url
+                      ? <img src={p.thumbnail_url} alt="видео" loading="lazy" className="photo-thumb" />
+                      : <div className="photo-thumb photo-thumb-placeholder" />)
+                  : <img src={p.thumbnail_url} alt="фото" loading="lazy" className="photo-thumb" />
                 }
                 {p.media_kind === 'video' && <span className="video-play-icon">▶</span>}
               </button>
