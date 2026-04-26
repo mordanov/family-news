@@ -19,7 +19,7 @@ export default function NewsCard({ news, colorMap, canManage, onEdit, onDelete, 
   const colorVal = colorMap[news.color] || '#F59E0B'
   const date = formatDate(news.created_at)
   const edited = news.updated_at && news.updated_at !== news.created_at
-  const photos = (news.photos || []).filter((p) => p.url)
+  const photos = (news.media || news.photos || []).filter((p) => p.url)
   const mediaItems = photos.map((p) => ({ url: p.url, media_kind: p.media_kind || 'image' }))
 
   return (
