@@ -14,7 +14,9 @@ export default function Lightbox() {
   const count = photos.length
   const hasCarousel = count > 1
   const safeIndex = count ? ((index % count) + count) % count : 0
-  const currentUrl = count ? photos[safeIndex] : null
+  const currentItem = count ? photos[safeIndex] : null
+  const currentUrl = currentItem ? (currentItem.url ?? currentItem) : null
+  const isVideo = currentItem?.media_kind === 'video'
 
   const overlayRef = useRef(null)
   const imgRef = useRef(null)
@@ -111,13 +113,24 @@ export default function Lightbox() {
       {hasCarousel && (
         <button className="lightbox-nav prev" onClick={() => moveLightbox(-1)} title="Предыдущее">‹</button>
       )}
-      <img
-        ref={imgRef}
-        src={currentUrl}
-        alt="фото"
-        className="lightbox-img"
-        style={{ touchAction: 'pan-y' }}
-      />
+      {isVideo ? (
+        <video
+          ref={imgRef}
+          src={currentUrl}
+          className="lightbox-img"
+          controls
+          autoPlay
+          style={{ touchAction: 'pan-y', maxHeight: '90vh', maxWidth: '95vw' }}
+        />
+      ) : (
+        <img
+          ref={imgRef}
+          src={currentUrl}
+          alt="фото"
+          className="lightbox-img"
+          style={{ touchAction: 'pan-y' }}
+        />
+      )}
       {hasCarousel && (
         <button className="lightbox-nav next" onClick={() => moveLightbox(1)} title="Следующее">›</button>
       )}

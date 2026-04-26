@@ -19,8 +19,8 @@ export default function NewsCard({ news, colorMap, canManage, onEdit, onDelete, 
   const colorVal = colorMap[news.color] || '#F59E0B'
   const date = formatDate(news.created_at)
   const edited = news.updated_at && news.updated_at !== news.created_at
-  const photos = (news.photos || [])
-  const photoUrls = photos.map((p) => p.url).filter(Boolean)
+  const photos = (news.photos || []).filter((p) => p.url)
+  const mediaItems = photos.map((p) => ({ url: p.url, media_kind: p.media_kind || 'image' }))
 
   return (
     <article className="news-card" style={{ '--card-color': colorVal }}>
@@ -46,11 +46,15 @@ export default function NewsCard({ news, colorMap, canManage, onEdit, onDelete, 
             {photos.map((p, i) => (
               <button
                 key={p.id || i}
-                className="photo-thumb-btn"
-                title="Открыть фото"
-                onClick={() => onOpenLightbox(photoUrls, i)}
+                className={`photo-thumb-btn${p.media_kind === 'video' ? ' video-thumb-btn' : ''}`}
+                title={p.media_kind === 'video' ? 'Открыть видео' : 'Открыть фото'}
+                onClick={() => onOpenLightbox(mediaItems, i)}
               >
-                <img src={p.thumbnail_url} alt="фото" loading="lazy" className="photo-thumb" />
+                {p.thumbnail_url
+                  ? <img src={p.thumbnail_url} alt={p.media_kind === 'video' ? 'видео' : 'фото'} loading="lazy" className="photo-thumb" />
+                  : <div className="photo-thumb photo-thumb-placeholder" />
+                }
+                {p.media_kind === 'video' && <span className="video-play-icon">▶</span>}
               </button>
             ))}
           </div>
